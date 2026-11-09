@@ -1850,9 +1850,12 @@ function stepGround(dt, inp) {
     }
     // big powder plumes
     if (P.speed > 150 && Math.random() < (0.3 + Math.abs(P.turn)) * P.speed / 700 * 50 * dt) {
+      // thrown to the outside of the turn and slightly behind, so it never fogs over the rider
       const side = P.turn > 0.1 ? -1 : P.turn < -0.1 ? 1 : (chance(0.5) ? -1 : 1);
-      particles.push({ x: P.x + rand(-6, 6), y: P.y + rand(-3, 3), z: 2, vx: Math.cos(P.mAng) * side * rand(30, 120) + Math.sin(P.mAng) * P.speed * 0.25,
-        vy: -Math.sin(P.mAng) * side * rand(30, 120) + Math.cos(P.mAng) * P.speed * 0.25, vz: rand(90, 220), life: rand(0.5, 0.9), max: 0.9, r: rand(3, 7), col: '#ffffff', g: 380 });
+      const px = Math.cos(P.mAng), py = -Math.sin(P.mAng), dx = Math.sin(P.mAng), dy = Math.cos(P.mAng);
+      particles.push({ x: P.x + px * side * 10 - dx * 6, y: P.y + py * side * 10 - dy * 6, z: 1,
+        vx: px * side * rand(40, 130) + dx * P.speed * 0.2, vy: py * side * rand(40, 130) + dy * P.speed * 0.2,
+        vz: rand(50, 150), life: rand(0.45, 0.8), max: 0.8, r: rand(2, 4.5), col: '#ffffff', g: 380 });
     }
   }
 
@@ -2365,8 +2368,43 @@ function rr(x, y, w, h, r) {
 }
 function poly(pts) { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); }
 
+// Deep Glades: one deep trench ploughed through the powder, with banks on either side
+function drawPowderTrenches(v, tr) {
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  let si = 0;
+  for (const st of tracks) {
+    si++;
+    if (st.length < 2) continue;
+    if (st[st.length - 1].y < v.top - 30 || st[0].y > v.bottom + 30) continue;
+    // path offset sideways from the centre line (positive = skier's right)
+    const path = (off, dx = 0, dy = 0) => {
+      ctx.beginPath();
+      for (let i = 0; i < st.length; i++) {
+        const p = st[i], ox = Math.cos(p.a) * off + dx, oy = -Math.sin(p.a) * off + dy;
+        if (i === 0) ctx.moveTo(p.x + ox, p.y + oy); else ctx.lineTo(p.x + ox, p.y + oy);
+      }
+      ctx.stroke();
+    };
+    // banks of thrown-up snow: soft shadow below, bright crest on top
+    ctx.strokeStyle = 'rgba(120,150,195,0.16)'; ctx.lineWidth = 34; path(0, 3, 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 30; path(0);
+    // the trench itself: shaded walls and a slightly lighter packed floor
+    ctx.strokeStyle = 'rgba(150,176,214,0.5)'; ctx.lineWidth = 19; path(0, 0, 1);
+    const floor = tr.track === 'rainbow' ? `hsla(${(si * 47 + time * 40) % 360}, 80%, 70%, 0.55)`
+      : tr.id === 'classic' ? 'rgba(196,214,236,0.85)' : tr.track.replace(/[\d.]+\)$/, '0.4)');
+    ctx.strokeStyle = floor; ctx.lineWidth = 10; path(0, 1.2, 1.5);
+    // two ski grooves with a raised ridge of snow left between them
+    ctx.strokeStyle = 'rgba(120,150,195,0.55)'; ctx.lineWidth = 3.2; path(-4.6, 0.6, 1); path(4.6, 0.6, 1);
+    ctx.strokeStyle = 'rgba(150,176,214,0.45)'; ctx.lineWidth = 2; path(1.6, 0.8, 1.2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.97)'; ctx.lineWidth = 3.2; path(0);
+    // sunlit lip on the left bank, shadowed lip on the right
+    ctx.strokeStyle = 'rgba(255,255,255,1)'; ctx.lineWidth = 2.4; path(-10.5);
+    ctx.strokeStyle = 'rgba(110,140,185,0.45)'; ctx.lineWidth = 2; path(9.5, 0.5, 0.8);
+  }
+}
 function drawTracks(v) {
   const tr = equipped('trail');
+  if (MAP.id === 'glade') { drawPowderTrenches(v, tr); return; }
   ctx.strokeStyle = tr.track === 'rainbow' ? '' : tr.track; ctx.lineWidth = tr.id === 'classic' ? 2 : 2.6; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   let si = 0;
   for (const st of tracks) {
@@ -3134,9 +3172,20 @@ function drawSkier() {
     });
     // sinking into deep powder / trapped in a tree well
     if ((MAP.id === 'glade' && !P.air && !G) || P.stuck > 0) {
-      const deep = P.stuck > 0 ? 1 : clamp(0.55 - P.speed / 1600, 0.2, 0.55);
-      ctx.fillStyle = 'rgba(150,175,210,0.45)'; ell(2, 3, 19, 6.5 + deep * 4); ctx.fill();
-      ctx.fillStyle = '#ffffff'; ell(0, 1 - deep * 5, 17, 5 + deep * 6); ctx.fill();
+      // soft powder burying the ski tips and boots, churning as you move
+      const deep = P.stuck > 0 ? 1 : clamp(0.6 - P.speed / 1500, 0.25, 0.6);
+      const yaw = P.ang, fx = Math.sin(yaw), fy = Math.cos(yaw) * 0.8, sx = Math.cos(yaw), sy = -Math.sin(yaw) * 0.8;
+      const blobs = [[15, 0, 8], [9, -5, 7], [9, 5, 7], [2, -6, 6], [2, 6, 6], [-4, 0, 6.5]];
+      ctx.save();
+      for (let i = 0; i < blobs.length; i++) {
+        const [along, side, r] = blobs[i];
+        const wob = Math.sin(time * 9 + i * 1.7) * 1.2;
+        const bx = fx * along + sx * side + wob * 0.5, by = fy * along + sy * side + 1 - deep * 2 + wob * 0.3;
+        const s = r * (0.75 + deep * 0.55) * (P.stuck > 0 ? 1.4 : 1);
+        ctx.globalAlpha = 0.55 + deep * 0.45;
+        ctx.drawImage(PUFF, bx - s, by - s * 0.8, s * 2, s * 1.6);
+      }
+      ctx.restore();
       if (P.stuck > 0) {
         ctx.font = `900 13px ${FONT}`; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
         ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(14,28,54,0.85)';
@@ -3173,8 +3222,8 @@ function drawParticles() {
     }
     if (SNOWY.has(p.col)) {
       // soft powder cloud that swells as it fades
-      const s = p.r * (2.4 + (1 - k) * 1.6);
-      ctx.globalAlpha = k * 0.9;
+      const s = p.r * (1.6 + (1 - k) * 1.4);
+      ctx.globalAlpha = k * 0.78;
       ctx.drawImage(PUFF, p.x - s, p.y - p.z - s, s * 2, s * 2);
       continue;
     }
