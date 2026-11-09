@@ -1,8 +1,10 @@
 # Powder Rush
 
-A downhill skiing game that runs in your browser — one HTML file, no install.
+## [▶ PLAY POWDER RUSH NOW](https://fridgepassword.github.io/powder-rush/)
 
-**To play:** download `index.html` and open it in any modern browser (Chrome, Edge, Firefox, Safari). Works on desktop and phones.
+**https://fridgepassword.github.io/powder-rush/** — plays right in your browser on desktop or phone, nothing to install.
+
+A downhill skiing game that runs in your browser — one HTML file. You can also download `index.html` and open it offline in any modern browser.
 
 ## Maps
 | Map | Rating | Special feature |
