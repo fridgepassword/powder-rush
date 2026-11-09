@@ -30,7 +30,10 @@
     border: 3px solid rgba(255,255,255,0.08); transition: transform .12s, border-color .12s, background .12s; text-align: left; padding: 0; color: #fff; }
   .card:hover, .mode:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
   .card.sel, .mode.sel { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); background: rgba(14,32,66,0.9); }
-  .card .art { display: block; height: 82px; }
+  .card .art { display: block; height: 82px; position: relative; }
+  .rate { position: absolute; top: 6px; left: 6px; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.93); color: #1b2230;
+    border-radius: 999px; padding: 2px 9px 2px 6px; font-size: 11px; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+  .rate svg { display: block; }
   .card .art svg { display: block; width: 100%; height: 100%; }
   .txt { display: block; padding: 8px 11px 10px; }
   .nm { display: block; font-weight: 800; font-size: 15px; }
@@ -326,19 +329,19 @@ const ZONE_M = [0, 350, 900, 1700, 2600];
 const ZONE_SUBS = ["Let's go!", 'Things are picking up', 'Experts only', 'No turning back', 'Legends only'];
 
 const MAPS = [
-  { id: 'pine', name: 'Pine Valley', desc: 'Forest run with slalom gates, logs, moguls and ice.',
+  { id: 'pine', name: 'Pine Valley', rate: 0, desc: 'Forest run with gates, logs and a snowcat grooming the slope.',
     zones: ['Green Meadow', 'Blue Ridge', 'Black Diamond', 'Double Black', 'The Abyss'],
     zcols: ['#1f9d5c', '#2a72dc', '#1b2230', '#1b2230', '#7b2ff0'] },
-  { id: 'park', name: 'Terrain Park', desc: 'Kickers, rails and boxes. Built for tricks.',
+  { id: 'park', name: 'Terrain Park', rate: 0, desc: 'Kickers, rails, boxes and judges scoring your tricks.',
     zones: ['Warm-up Line', 'Medium Line', 'Pro Line', 'Big Air Line', 'Mega Line'],
     zcols: ['#2b8cff', '#ff8a1f', '#e5333b', '#e5333b', '#7b2ff0'] },
-  { id: 'glacier', name: 'Glacier Pass', desc: 'Slick ice, deep crevasses and frozen spires.',
+  { id: 'glacier', name: 'Glacier Pass', rate: 1, desc: 'Slick ice, crevasses, and ice balls lobbed across the slope.',
     zones: ['Ice Shelf', 'Frozen Falls', 'Crevasse Field', 'Blue Maze', 'The White Void'],
     zcols: ['#2a9fd8', '#2a72dc', '#14507e', '#14507e', '#7b2ff0'] },
-  { id: 'glade', name: 'Deep Glades', desc: 'Deep-powder tree skiing: duck branches, thread gaps, dodge tree wells.',
+  { id: 'glade', name: 'Deep Glades', rate: 2, desc: 'Deep-powder trees: duck branches, dodge tree wells and snow bombs.',
     zones: ['Aspen Glade', 'Old Growth', 'Tight Trees', 'Tree Well Alley', 'The Thicket'],
     zcols: ['#2f8f4e', '#2a72dc', '#1b2230', '#1b2230', '#7b2ff0'] },
-  { id: 'night', name: 'Midnight Woods', desc: 'Ski by lantern light through the dark pines.',
+  { id: 'night', name: 'Midnight Woods', rate: 3, desc: 'Pitch black. Only your headlamp and flares light the way.',
     zones: ['Lantern Trail', 'Owl Hollow', 'Shadow Pines', 'Moonless Drop', 'The Deep Dark'],
     zcols: ['#ffb84a', '#ffb84a', '#ffd27a', '#ffd27a', '#c9a8ff'] },
 ];
@@ -347,6 +350,15 @@ const MODES = [
   { id: 'freeride', name: 'Free Ride', desc: 'No avalanche. Crash, get back up, keep shredding.' },
   { id: 'onelife', name: 'One Life', desc: 'One crash and the run is over. Tricks score 2× on Normal & Pro.' },
 ];
+// trail-style map ratings: green circle, blue square, black diamond, double black diamond
+const RATINGS = ['Easy', 'Intermediate', 'Advanced', 'Expert'];
+function rateIcon(r, size = 12) {
+  const d = `<path d="M6 0.5 L11.5 6 L6 11.5 L0.5 6Z" fill="#1b2230"/>`;
+  const shape = r === 0 ? `<circle cx="6" cy="6" r="5.5" fill="#1f9d5c"/>` : r === 1 ? `<rect x="1" y="1" width="10" height="10" fill="#2a72dc"/>` : d;
+  if (r === 3) return `<svg width="${size * 1.8}" height="${size}" viewBox="0 0 22 12">${d}<g transform="translate(10 0)">${d}</g></svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 12 12">${shape}</svg>`;
+}
+const rateBadge = r => `<span class="rate">${rateIcon(r)}${RATINGS[r]}</span>`;
 
 // tol = max landing error (radians) before you bail; clean = error for a perfect landing (between = sketchy save)
 const DIFFS = [
@@ -824,6 +836,7 @@ let score, evScore, combo, maxDist, particles, popups, tracks, curStroke;
 let shake, zoneIdx, banner, overT = 0, overReason = 'buried', stats, hintT, tip, newBest;
 let time = 0, camX = 0, camY = 0, viewS = 1, letters = 0;
 let comboT = 0, npcs = [], npcTimer = 6, airTrail = [], flashA = 0, runMissions = [], runCoins = 0, settled = true, confetti = [];
+let iceballs = [], bombs = [], iceTimer = 4, bombTimer = 3, splashA = 0, splashBlobs = [], judgeNext = 900;
 const tipsSeen = new Set();
 const COMBO_TIME = { easy: 6, normal: 4.5, pro: 3.5 };
 // power-ups: duration (s), colour, label
@@ -849,10 +862,11 @@ function reset() {
     spin: 0, spinTotal: 0, flip: 0, flipTotal: 0, grabs: {}, grabMask: 0,
     grind: null, crashT: 0, cvx: 0, cvy: 0, invuln: 0, hopCD: 0,
     tuck: false, brake: false, turn: 0, onIce: false, onMogul: false,
-    tuckAmt: 0, wobble: 0, gapEnd: 0, crashMax: 1, crashSide: 1, stuck: 0, wellCD: 0, turnDir: 0, turnHold: 0, turnChain: 0, lastTurnT: -9,
+    tuckAmt: 0, wobble: 0, gapEnd: 0, crashMax: 1, crashSide: 1, stuck: 0, wellCD: 0, turnDir: 0, turnHold: 0, turnChain: 0, lastTurnT: -9, flare: 0, judgeEnd: 0, onCord: false,
     pw: { magnet: 0, shield: 0, boost: 0, double: 0, ghost: 0 },
   };
   letters = 0; comboT = 0; npcs = []; npcTimer = rand(4, 7); airTrail = []; flashA = 0; confetti = [];
+  iceballs = []; bombs = []; iceTimer = rand(3, 5); bombTimer = rand(2, 4); splashA = 0; splashBlobs = []; judgeNext = 900;
   runMissions = SAVE.missions.map(id => ({ m: MISSION_POOL.find(x => x.id === id), done: false })).filter(r => r.m);
   runCoins = 0; settled = false;
   objs = []; pending = []; gReserved = []; gSolids = [];
@@ -1134,21 +1148,44 @@ function genStart(G) {
 }
 
 // ---- map generators
+// Pine Valley: a snowcat grooms a lane across the slope, leaving fast corduroy behind it
+function addSnowcat(G) {
+  const y = rand(G.y0 + 80, G.y1 - 80);
+  for (let x = G.L; x <= G.R; x += 70) if (!okSpot(x, y, 30, 0)) return;
+  for (let x = G.L; x <= G.R; x += 70) addReserve(x, y, 38);
+  const dir = chance(0.5) ? 1 : -1, x0 = -dir * (COURSE_HALF - 40);
+  G.out.push({ t: 'cat', x: x0, y, dir, sp: rand(85, 120), x0, x1: x0, seen: false });
+}
 function genForest(G, night) {
   const d = G.d;
   addSlalom(G);
+  if (!night && chance(0.22 + 0.1 * d)) addSnowcat(G);
   if (chance(lerp(0.25, 0.42, d))) addRandomRamp(G, d > 0.25 && chance(0.4) ? KICK.big : KICK.std);
   addFlakeLines(G, 0.6);
   if (chance(0.3 + 0.2 * d)) addMoguls(G);
   if (chance(lerp(0.08, night ? 0.15 : 0.3, d))) addIce(G, 1);
   addLogs(G, lerp(0.15, 0.5, d));
   addRocks(G, randi(0, 1 + Math.round(3 * d)));
-  if (night) addLanterns(G, randi(2, 3));
+  if (night) {
+    addLanterns(G, randi(1, 2));
+    // flares light up the dark for a few seconds
+    if (chance(0.45)) for (let t = 0; t < 8; t++) {
+      const x = rand(G.L + 60, G.R - 60), y = rand(G.y0 + 30, G.y1 - 30);
+      if (okSpot(x, y, 24, 20)) { G.out.push({ t: 'flare', x, y, got: false }); addReserve(x, y, 24); break; }
+    }
+    // something is watching from the dark
+    for (let n = randi(0, 2); n > 0; n--) G.out.push({ t: 'eyes', x: rand(G.L - 100, G.R + 100), y: rand(G.y0, G.y1), ph: rand(0, TAU), gone: false });
+  }
   addGroves(G, chance(0.65) ? randi(1, 1 + Math.round(d * 2)) : 0);
   addTrees(G, Math.round(lerp(7, 17, d)), 55);
 }
 function genPark(G) {
   const d = G.d;
+  // judges' zone: tricks landed inside score ×1.5
+  if (G.y0 >= judgeNext && chance(0.35)) {
+    G.out.push({ t: 'judges', x: COURSE_HALF - 70, y: G.y0 + 20, h: 760, cards: null, cardsT: -9 });
+    judgeNext = G.y0 + 1800;
+  }
   const lanes = [-540, -180, 180, 540].map(x => x + rand(-50, 50)).sort(() => Math.random() - 0.5);
   const nFeat = chance(0.4 + d * 0.4) ? 4 : 3;
   G.wantLetter = chance(0.4);
@@ -1294,6 +1331,16 @@ function prune() {
 // ============================================================
 // Avalanche & One Life on Normal/Pro pay double for tricks off jumps and rails
 const trickBonus = () => (MODE.id === 'avalanche' || MODE.id === 'onelife') && DIFF.id !== 'easy' ? 2 : 1;
+const judged = () => MAP.id === 'park' && P.y < P.judgeEnd;
+const trickMul = () => trickBonus() * (judged() ? 1.5 : 1);
+// judges hold up scorecards for tricks landed in their zone
+function judgeCards(pts) {
+  if (!judged() || !P.judgeObj) return;
+  const base = clamp(5 + Math.log10(Math.max(10, pts)) * 1.2, 5, 9.6);
+  const cards = [0, 1, 2].map(() => clamp(Math.round((base + rand(-0.6, 0.6)) * 2) / 2, 4, 10));
+  P.judgeObj.cards = cards; P.judgeObj.cardsT = time;
+  popup('Judges: ' + cards.map(c => c.toFixed(1)).join('  ·  '), '#ffd43b', true);
+}
 function bumpCombo(n) {
   combo += n; comboT = 0;
   stats.maxMult = Math.max(stats.maxMult, mult());
@@ -1420,7 +1467,8 @@ function awardAir(r) {
   const trick = r.spins || r.flips || r.grabs;
   const col = r.flips ? '#ffb86b' : r.spins ? '#ffe27a' : r.grabs ? '#9fe7ff' : '#c9f0ff';
   const label = (r.sketchy ? (DIFF.assist ? 'Saved it! ' : 'Sketchy ') : '') + (r.cats >= 2 && !r.sketchy ? r.name + '!' : r.name);
-  const pts = addPoints(r.pts * trickBonus(), label, r.sketchy ? '#ffe9a8' : col, !!trick);
+  const pts = addPoints(r.pts * trickMul(), label, r.sketchy ? '#ffe9a8' : col, !!trick);
+  if (trick) judgeCards(pts);
   bumpCombo(r.sketchy ? 1 : 1 + r.spins + r.flips * 2 + r.grabs);
   if (trick) stats.tricks++;
   if (r.sketchy) stats.saves++;
@@ -1474,7 +1522,8 @@ function endGrind(T) {
   const G = P.grind, o = G.o;
   P.grind = null;
   const r = grindResult(G);
-  const pts = addPoints(r.pts * trickBonus(), r.name, '#ffd27a', true);
+  const pts = addPoints(r.pts * trickMul(), r.name, '#ffd27a', true);
+  judgeCards(pts);
   bumpCombo(2); stats.grinds++;
   if (o.kind === 'logjib') stats.logRides++;
   if (pts > stats.bestTrickPts) { stats.bestTrickPts = pts; stats.bestTrick = r.name; }
@@ -1726,6 +1775,7 @@ function stepGround(dt, inp) {
   if (P.onMogul) { f *= 3.2; k *= 2.2; }
   const powder = MAP.id === 'glade';
   if (powder) k *= 1.3;
+  if (P.onCord) { k *= 0.55; P.speed += 110 * dt; }
   if (P.pw.boost > 0) {
     k *= 0.45; P.speed += 650 * dt;
     if (Math.random() < dt * 60) particles.push({ x: P.x + rand(-5, 5), y: P.y - 6, z: rand(4, 14), vx: -Math.sin(P.mAng) * 160 + rand(-30, 30), vy: -Math.cos(P.mAng) * 160, vz: rand(-20, 40), life: 0.35, max: 0.35, r: rand(2, 4.5), col: chance(0.5) ? '#ffb13b' : '#ff6b2b', g: 0 });
@@ -1808,7 +1858,7 @@ function stepAir(dt, inp) {
 }
 
 function collide() {
-  P.onIce = false; P.onMogul = false;
+  P.onIce = false; P.onMogul = false; P.onCord = false;
   const lo = lowerBound(P.y - 360);
   const ground = P.z < 4;
   for (let i = lo; i < objs.length; i++) {
@@ -1889,6 +1939,26 @@ function collide() {
         break;
       case 'power':
         if (!o.got && P.crashT <= 0 && dx * dx + dy * dy < 34 * 34 && P.z < 70) collectPower(o);
+        break;
+      case 'cat':
+        if (canHit && P.z < 34 && Math.abs(dx) < 44 && Math.abs(dy) < 20) { crash(pick(['Snowcat crash!', 'Groomed!', 'Watch the snowcat!']), null); P.cvx = Math.sign(dx || 1) * 120; P.cvy = 60; }
+        else if (ground && Math.abs(dy) < 28 && P.x > o.sMin && P.x < o.sMax) {
+          P.onCord = true;
+          if (!o.seen) { o.seen = true; popup('Fresh corduroy! +speed', '#ffffff'); }
+        }
+        break;
+      case 'flare':
+        if (!o.got && P.crashT <= 0 && dx * dx + dy * dy < 32 * 32 && P.z < 60) {
+          o.got = true; P.flare = 8;
+          popup('Flare! The woods light up', '#ff9a6b', true);
+          burst(0.6, 0.25, 'bandpass', 2400); tone(330, 0.4, 'sawtooth', 0.05, 660);
+        }
+        break;
+      case 'judges':
+        if (P.py < o.y && P.y >= o.y) {
+          P.judgeEnd = o.y + o.h; P.judgeObj = o;
+          popup("Judges' zone — tricks ×1.5!", '#ffd43b', true);
+        }
         break;
       case 'well':
         if (canHit && ground && P.stuck <= 0 && P.wellCD <= 0 && dx * dx + (dy * 1.6) ** 2 < (o.r * 0.95) ** 2) {
@@ -1996,9 +2066,14 @@ const TIPS = {
   needle: ['Tight gap! Thread between the trees for bonus points', 'Tight gap! Thread between the trees for bonus points'],
   power: ['Power-up! Magnet, Shield, Boost, 2× Points or Ghost', 'Power-up! Magnet, Shield, Boost, 2× Points or Ghost'],
   snowman: ['Snowman! Smash it for points (it slows you down)', 'Snowman! Smash it for points (it slows you down)'],
+  cat: ['Snowcat ahead! Avoid it, then ride its fresh corduroy for a speed boost', 'Snowcat ahead! Avoid it, then ride its fresh corduroy for a speed boost'],
+  judges: ["Judges' zone ahead — tricks landed inside score ×1.5!", "Judges' zone ahead — tricks landed inside score ×1.5!"],
+  flare: ['Flare! Grab it to light up the woods for a few seconds', 'Flare! Grab it to light up the woods for a few seconds'],
+  iceball: ['Ice balls incoming! Watch the edge arrows and dodge them', 'Ice balls incoming! Watch the edge arrows and dodge them'],
+  bomb: ['Snow bombs! Dodge the shadows under the trees', 'Snow bombs! Dodge the shadows under the trees'],
 };
 const TIP_KEY = { gate: 'gate', ramp: 'ramp', rail: 'rail', log: 'hop', rock: 'hop', ice: 'ice', mogul: 'mogul', crev: 'crev', gap: 'gap', hoop: 'hoop', letter: 'letter',
-  branch: 'branch', well: 'well', needle: 'needle', power: 'power', snowman: 'snowman' };
+  branch: 'branch', well: 'well', needle: 'needle', power: 'power', snowman: 'snowman', cat: 'cat', judges: 'judges', flare: 'flare' };
 function checkTips() {
   if (tip) return;
   const lo = lowerBound(P.y + 100);
@@ -2060,14 +2135,108 @@ function updatePlay(dt) {
   const v = viewRect();
   for (let i = lowerBound(v.top - 200); i < objs.length; i++) {
     const o = objs[i]; if (o.y > v.bottom + 300) break;
+    if (o.t === 'cat') {
+      // snowcat drives back and forth, grooming corduroy behind it
+      o.x += o.dir * o.sp * dt;
+      if (o.sMin === undefined) o.sMin = o.sMax = o.x;
+      o.sMin = Math.min(o.sMin, o.x); o.sMax = Math.max(o.sMax, o.x);
+      if (Math.abs(o.x) > COURSE_HALF - 40) { o.dir = -Math.sign(o.x); o.x = Math.sign(o.x) * (COURSE_HALF - 40); }
+      if (Math.random() < dt * 6) particles.push({ x: o.x - o.dir * 26, y: o.y - 2, z: 34, vx: -o.dir * 20, vy: -10, vz: 30, life: 0.9, max: 0.9, r: rand(3, 6), col: 'rgba(120,130,145,0.6)', g: -20 });
+      continue;
+    }
+    if (o.t === 'eyes') { if (!o.gone && Math.hypot(P.x - o.x, P.y - o.y) < 170) o.gone = true; continue; }
     if (o.t !== 'critter') continue;
     o.flee -= dt;
     o.ph += dt * (o.kind === 'bunny' ? 9 : 5);
     o.x += o.dir * o.sp * (o.flee > 0 ? 2.6 : 1) * dt;
     if (Math.abs(o.x) > COURSE_HALF - 30) o.dir = -Math.sign(o.x);
   }
+  if (P.flare > 0) P.flare = Math.max(0, P.flare - dt);
+  updateIceballs(dt);
+  updateBombs(dt);
+  splashA = Math.max(0, splashA - dt * 0.55);
   updateRivals(dt);
   checkMissions();
+}
+// ---- Glacier Pass: ice balls lobbed slowly across the slope from the sides
+function updateIceballs(dt) {
+  if (MAP.id !== 'glacier' || maxDist < 40) return;
+  const d = clamp(maxDist / 3000, 0, 1);
+  iceTimer -= dt;
+  if (iceTimer <= 0) {
+    iceTimer = lerp(4.8, 2.3, d) * rand(0.8, 1.25);
+    const v = viewRect(), off = clamp((v.right - v.left) / 2 * 0.75, 300, 480);
+    let side = chance(0.5) ? -1 : 1;
+    if (Math.abs(P.x + side * off) > COURSE_HALF - 20) side = -side;
+    iceballs.push({ side, off, dy0: rand(90, 190), r: rand(11, 16), rot: 0, warn: 0.9, x: P.x + side * off, y: P.y + 150, z: 0, vz: 0, vx: 0, vy: 0 });
+    if (!tipsSeen.has('iceball') && !tip) { tipsSeen.add('iceball'); tip = { text: TIPS.iceball[isTouch ? 1 : 0], t: 3.6 }; }
+  }
+  for (const b of iceballs) {
+    if (b.warn > 0) {
+      // the throw is telegraphed beside you, then lobbed slowly toward where you're heading
+      b.warn -= dt;
+      b.x = clamp(P.x + b.side * b.off, -COURSE_HALF + 20, COURSE_HALF - 20); b.y = P.y + b.dy0;
+      if (b.warn <= 0) {
+        const t = rand(1.8, 2.6) * lerp(1, 0.85, d);
+        const vxp = Math.sin(P.mAng) * P.speed, vyp = Math.cos(P.mAng) * P.speed;
+        b.vx = (P.x + vxp * t - b.x) / t; b.vy = Math.max(-40, vyp - b.dy0 / t);
+        b.z = 10; b.vz = 0.5 * 700 * 0.8;
+        puff(b.x, b.y, 10); burst(0.2, 0.2, 'highpass', 2200);
+      }
+      continue;
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vx * dt / b.r;
+    b.vz -= 700 * dt; b.z += b.vz * dt;
+    if (b.z < 0) { b.z = 0; b.vz = Math.abs(b.vz) * 0.55; if (b.vz < 70) b.vz = 0; else puff(b.x, b.y, 3); }
+    if (P.crashT <= 0 && P.invuln <= 0 && P.pw.ghost <= 0 && Math.abs(P.x - b.x) < b.r + PR && Math.abs(P.y - b.y) < b.r + PR && Math.abs((P.z + 12) - (b.z + b.r)) < b.r + 16) {
+      b.dead = true; shatter(b.x, b.y, b.z);
+      crash(pick(['Iceballed!', 'Brain freeze!', 'Ice to see you!']), null);
+    }
+    if (Math.abs(b.x) > COURSE_HALF + 260 || b.y < P.y - 900) b.dead = true;
+  }
+  iceballs = iceballs.filter(b => !b.dead);
+}
+function shatter(x, y, z) {
+  for (let i = 0; i < 18; i++) {
+    const a = rand(0, TAU), s = rand(60, 200);
+    particles.push({ x, y, z: z + 10, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 220), life: rand(0.4, 0.8), max: 0.8, r: rand(1.5, 4), col: chance(0.5) ? '#bfe6ff' : '#ffffff' });
+  }
+  burst(0.25, 0.35, 'highpass', 2500);
+}
+// ---- Deep Glades: clumps of snow drop out of the trees (watch for the shadow)
+function updateBombs(dt) {
+  if (MAP.id !== 'glade' || maxDist < 40) return;
+  bombTimer -= dt;
+  if (bombTimer <= 0) {
+    bombTimer = rand(1.4, 3);
+    const px = P.x + Math.sin(P.mAng) * P.speed * 1.1, py = P.y + Math.cos(P.mAng) * P.speed * 1.1;
+    let best = null, bd = 1e9;
+    for (let i = lowerBound(P.y + 120); i < objs.length; i++) {
+      const o = objs[i]; if (o.y > P.y + 460) break;
+      if (o.t !== 'tree' || o.edge) continue;
+      const dd = Math.hypot(o.x - px, o.y - py);
+      if (dd < bd) { bd = dd; best = o; }
+    }
+    if (best && bd < 260) {
+      const tx = best.x + clamp(px - best.x, -70, 70);
+      bombs.push({ x: tx, y: best.y + rand(12, 30), t: 0, T: 1.15, tree: best });
+      if (!tipsSeen.has('bomb') && !tip) { tipsSeen.add('bomb'); tip = { text: TIPS.bomb[isTouch ? 1 : 0], t: 3.6 }; }
+      best.shakeT = time;
+    }
+  }
+  for (const b of bombs) {
+    b.t += dt;
+    if (b.t < b.T) continue;
+    b.dead = true;
+    for (let i = 0; i < 16; i++) { const a = rand(0, TAU), s = rand(30, 140); particles.push({ x: b.x, y: b.y, z: 2, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, vz: rand(60, 200), life: rand(0.4, 0.8), max: 0.8, r: rand(2.5, 6), col: '#ffffff' }); }
+    burst(0.3, 0.3, 'lowpass', 700);
+    if (P.crashT <= 0 && P.pw.ghost <= 0 && P.z < 40 && Math.hypot(P.x - b.x, P.y - b.y) < 30) {
+      P.speed *= 0.45; P.wobble = 0.6;
+      splashA = 1; splashBlobs = Array.from({ length: 9 }, () => ({ x: rand(0.1, 0.9), y: rand(0.15, 0.85), r: rand(0.12, 0.26) }));
+      popup(pick(['Snow bomb!', 'Face full of powder!', 'Tree dump!']), '#ffffff', true);
+    }
+  }
+  bombs = bombs.filter(b => !b.dead);
 }
 
 function updateOver(dt) {
@@ -2361,6 +2530,23 @@ function drawGroundObj(o) {
       break;
     case 'lantern': ctx.fillStyle = 'rgba(255,200,120,0.25)'; ell(o.x + 4, o.y + 2, 26, 9); ctx.fill(); break;
     case 'snowman': ctx.fillStyle = 'rgba(70,100,150,0.2)'; ell(o.x + 6, o.y + 2, 16, 5); ctx.fill(); break;
+    case 'cat':
+      if (o.sMin !== undefined && o.sMax - o.sMin > 4) {
+        // freshly groomed corduroy behind the snowcat
+        ctx.fillStyle = 'rgba(255,255,255,0.75)'; rr(o.sMin, o.y - 26, o.sMax - o.sMin, 52, 10); ctx.fill();
+        ctx.strokeStyle = 'rgba(140,165,200,0.28)'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let yy = o.y - 22; yy <= o.y + 22; yy += 5) { ctx.moveTo(o.sMin + 4, yy); ctx.lineTo(o.sMax - 4, yy); }
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(60,85,130,0.28)'; ell(o.x + 8, o.y + 4, 50, 14); ctx.fill();
+      break;
+    case 'flare': if (!o.got) { ctx.fillStyle = 'rgba(70,100,150,0.2)'; ell(o.x, o.y + 1, 8, 3); ctx.fill(); } break;
+    case 'judges': {
+      ctx.strokeStyle = 'rgba(255,196,40,0.7)'; ctx.lineWidth = 4; ctx.setLineDash([18, 12]);
+      line(-COURSE_HALF, o.y, COURSE_HALF, o.y); ctx.setLineDash([]);
+      break;
+    }
     case 'well': {
       const g = ctx.createRadialGradient(o.x, o.y + 2, o.r * 0.2, o.x, o.y, o.r);
       g.addColorStop(0, 'rgba(30,55,100,0.75)'); g.addColorStop(0.65, 'rgba(70,105,160,0.45)'); g.addColorStop(1, 'rgba(120,150,200,0)');
@@ -2481,6 +2667,96 @@ function drawUprightObj(o) {
     case 'snowman': drawSnowman(o); break;
     case 'critter': drawCritter(o); break;
     case 'branch': drawBranch(o); break;
+    case 'cat': drawSnowcat(o); break;
+    case 'flare': drawFlarePickup(o); break;
+    case 'judges': drawJudges(o); break;
+  }
+}
+function drawSnowcat(o) {
+  const x = o.x, y = o.y, d = o.dir;
+  ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
+  // tracks
+  ctx.fillStyle = '#23272f'; rr(-36, -12, 62, 16, 7); ctx.fill();
+  ctx.strokeStyle = '#4a505c'; ctx.lineWidth = 1.5;
+  for (let i = -30; i < 22; i += 6) line(i + ((time * o.sp * 0.3) % 6), -10, i + ((time * o.sp * 0.3) % 6), 2);
+  // body + cab
+  ctx.fillStyle = '#e5333b'; rr(-34, -34, 54, 22, 5); ctx.fill();
+  ctx.fillStyle = '#c0242c'; ctx.fillRect(-34, -16, 54, 4);
+  ctx.fillStyle = '#e5333b'; rr(-14, -54, 28, 22, 4); ctx.fill();
+  ctx.fillStyle = '#9fd8ff'; rr(-10, -50, 20, 11, 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(-8, -49, 5, 9);
+  ctx.fillStyle = '#ffffff'; ctx.font = `900 7px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('GROOMER', -7, -20);
+  // front blade
+  ctx.fillStyle = '#9aa3b1'; rr(24, -26, 10, 30, 3); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ell(36, 0, 6, 4); ctx.fill();
+  // tiller at the back
+  ctx.fillStyle = '#4a505c'; rr(-46, -16, 12, 18, 3); ctx.fill();
+  // beacon
+  const on = Math.floor(time * 4) % 2 === 0;
+  ctx.fillStyle = on ? '#ffb020' : '#8a5a10'; ell(0, -57, 3.5, 3); ctx.fill();
+  if (on) { ctx.fillStyle = 'rgba(255,176,32,0.3)'; ell(0, -57, 12, 9); ctx.fill(); }
+  ctx.restore();
+}
+function drawFlarePickup(o) {
+  if (o.got) return;
+  const y = o.y - 14 + Math.sin(time * 3 + o.x) * 2;
+  const g = ctx.createRadialGradient(o.x, y - 10, 1, o.x, y - 10, 22);
+  g.addColorStop(0, 'rgba(255,120,60,0.8)'); g.addColorStop(1, 'rgba(255,120,60,0)');
+  ctx.fillStyle = g; ctx.fillRect(o.x - 22, y - 32, 44, 44);
+  ctx.save(); ctx.translate(o.x, y); ctx.rotate(0.35);
+  ctx.fillStyle = '#c0242c'; rr(-3, -10, 6, 20, 2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(-3, -2, 6, 3);
+  ctx.fillStyle = '#ffd27a'; ell(0, -12, 3.5 + Math.sin(time * 20) * 0.8, 4.5); ctx.fill();
+  ctx.restore();
+}
+function drawJudges(o) {
+  // banner across the slope
+  const cy = o.y;
+  ctx.strokeStyle = '#3a3f4a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  line(-170, cy, -170, cy - 80); line(170, cy, 170, cy - 80);
+  ctx.fillStyle = '#ffc928'; rr(-182, cy - 102, 364, 28, 6); ctx.fill();
+  ctx.fillStyle = '#1b2230'; ctx.font = `900 15px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText("JUDGES' ZONE  ·  TRICKS ×1.5", 0, cy - 87);
+  // judges' table at the side of the run
+  const x = o.x, y = o.y + 70;
+  ctx.fillStyle = 'rgba(60,85,130,0.25)'; ell(x + 6, y + 4, 52, 10); ctx.fill();
+  const showing = time - o.cardsT < 2.2 && o.cards;
+  for (let i = 0; i < 3; i++) {
+    const jx = x - 30 + i * 30;
+    ctx.fillStyle = ['#2b6fe8', '#e5333b', '#2f8f4e'][i]; rr(jx - 7, y - 30, 14, 16, 5); ctx.fill();
+    ctx.fillStyle = '#f1c39b'; ell(jx, y - 35, 5, 5); ctx.fill();
+    ctx.fillStyle = '#1b1f29'; ctx.beginPath(); ctx.arc(jx, y - 36, 5.3, Math.PI, 0); ctx.fill();
+    if (showing) {
+      ctx.fillStyle = '#ffffff'; rr(jx - 11, y - 64, 22, 16, 3); ctx.fill();
+      ctx.strokeStyle = '#1b1f29'; ctx.lineWidth = 1.2; rr(jx - 11, y - 64, 22, 16, 3); ctx.stroke();
+      ctx.fillStyle = '#1b1f29'; ctx.font = `900 10px ${FONT}`; ctx.fillText(o.cards[i].toFixed(1), jx, y - 55.5);
+      ctx.strokeStyle = '#1b1f29'; ctx.lineWidth = 2; line(jx + 6, y - 28, jx + 4, y - 48);
+    }
+  }
+  ctx.fillStyle = '#ffffff'; rr(x - 48, y - 16, 96, 14, 3); ctx.fill();
+  ctx.fillStyle = '#c9d6e6'; ctx.fillRect(x - 48, y - 4, 96, 4);
+  ctx.fillStyle = '#ffc928'; ctx.font = `900 8px ${FONT}`; ctx.fillStyle = '#1b2230'; ctx.fillText('JUDGES', x, y - 9);
+}
+// moving hazards (ice balls, falling snow) drawn over the scenery
+function drawHazards(v) {
+  for (const b of iceballs) {
+    if (b.warn > 0) continue;
+    const sh = 1 / (1 + b.z / 80);
+    ctx.fillStyle = `rgba(60,110,170,${0.3 * sh})`; ell(b.x + b.z * 0.1, b.y + 2, b.r * 1.1, b.r * 0.4); ctx.fill();
+    const cy = b.y - b.z - b.r;
+    const g = ctx.createRadialGradient(b.x - b.r * 0.35, cy - b.r * 0.35, 1, b.x, cy, b.r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#bfe6ff'); g.addColorStop(1, '#5aa8e0');
+    ctx.fillStyle = g; ell(b.x, cy, b.r, b.r); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.6;
+    for (let k = 0; k < 3; k++) { const a = b.rot + k * 2.1; line(b.x + Math.cos(a) * b.r * 0.2, cy + Math.sin(a) * b.r * 0.2, b.x + Math.cos(a) * b.r * 0.8, cy + Math.sin(a) * b.r * 0.8); }
+    ctx.strokeStyle = 'rgba(30,80,140,0.5)'; ctx.lineWidth = 1; ell(b.x, cy, b.r, b.r); ctx.stroke();
+  }
+  for (const b of bombs) {
+    const k = b.t / b.T, z = 150 * (1 - k * k);
+    ctx.fillStyle = `rgba(40,70,120,${0.12 + 0.3 * k})`; ell(b.x, b.y, 10 + 18 * k, 4 + 6 * k); ctx.fill();
+    ctx.strokeStyle = `rgba(255,90,90,${0.35 * k})`; ctx.lineWidth = 1.5; ell(b.x, b.y, 30, 11); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ell(b.x, b.y - z - 6, 11, 9); ctx.fill(); ell(b.x + 6, b.y - z - 10, 7, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(160,185,215,0.6)'; ell(b.x + 3, b.y - z - 2, 8, 4); ctx.fill();
   }
 }
 // low bough strung between two trees
@@ -2908,6 +3184,7 @@ function drawWorld(v) {
   }
   while (ri < riders.length) drawRival(riders[ri++]);
   if (!drawn) drawSkier();
+  drawHazards(v);
   drawParticles();
   drawAvalanche(v);
 }
@@ -2922,7 +3199,8 @@ function drawNight(v) {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'source-over';
   g.clearRect(0, 0, darkC.width, darkC.height);
-  g.fillStyle = state === 'menu' ? 'rgba(6,12,34,0.72)' : 'rgba(6,12,34,0.86)';
+  // pitch black: the only light is your headlamp (plus flares and distant lantern beacons)
+  g.fillStyle = state === 'menu' ? 'rgba(2,4,12,0.9)' : 'rgb(2,4,12)';
   g.fillRect(0, 0, darkC.width, darkC.height);
   g.globalCompositeOperation = 'destination-out';
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -2931,35 +3209,56 @@ function drawNight(v) {
     gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.7})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = gr; g.fillRect(sx - r, sy - r, r * 2, r * 2);
   };
+  // soft-edged beam: stacked wedges, brightest down the middle
+  const cone = (x, y, ang, half, R) => {
+    for (const [h, a] of [[half, 0.5], [half * 0.72, 0.32], [half * 0.42, 0.3]]) {
+      const gr = g.createRadialGradient(x, y, 0, x, y, R);
+      gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.7, `rgba(0,0,0,${a * 0.85})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(x, y); g.arc(x, y, R, ang - h, ang + h); g.closePath(); g.fill();
+    }
+  };
   const s = viewS;
   const lamps = [];
+  let flareAt = null;
   if (state !== 'menu') {
     const [sx, sy] = toScreen(P.x, P.y - P.z);
-    hole(sx, sy - 10 * s, 150 * s, 1);
     const a = P.grind ? P.grind.o.a : P.mAng;
-    hole(sx + Math.sin(a) * 210 * s, sy + Math.cos(a) * 210 * s, 240 * s, 0.92);
+    hole(sx, sy - 10 * s, 70 * s, 1);
+    cone(sx, sy - 12 * s, Math.atan2(Math.cos(a), Math.sin(a)), 0.62, 420 * s);
+    if (P.flare > 0) { const k = Math.min(1, P.flare); hole(sx, sy, 440 * s * (0.6 + 0.4 * k), k); flareAt = [sx, sy, k]; }
   }
   const lo = lowerBound(v.top - 100);
+  const eyes = [];
   for (let i = lo; i < objs.length; i++) {
     const o = objs[i]; if (o.y > v.bottom + 200) break;
     if (o.x < v.left - 200 || o.x > v.right + 200) continue;
-    if (o.t === 'lantern') { const [lx, ly] = toScreen(o.x + 7, o.y - 30); hole(lx, ly, 150 * s, 0.9); lamps.push([lx, ly]); }
-    else if (o.t === 'gate' && o.state !== 2) { const [gx, gy] = toScreen(o.x, o.y - 30); hole(gx, gy, 70 * s, 0.6); }
-    else if (o.t === 'ramp') { const [rx, ry] = toScreen(o.x, o.y); hole(rx, ry, 80 * s, 0.7); }
-    else if (o.t === 'power' && !o.got) { const [qx, qy] = toScreen(o.x, o.y - 24); hole(qx, qy, 45 * s, 0.85); }
-    else if (o.t === 'snowman' && !o.smashed) { const [qx, qy] = toScreen(o.x, o.y - 25); hole(qx, qy, 40 * s, 0.5); }
-    else if (o.t === 'flake' && !o.got) { const [fx, fy] = toScreen(o.x, o.y - o.fz - 14); hole(fx, fy, 28 * s, 0.8); }
+    if (o.t === 'lantern') { const [lx, ly] = toScreen(o.x + 7, o.y - 40); hole(lx, ly, 34 * s, 0.9); lamps.push([lx, ly]); }
+    else if (o.t === 'flare' && !o.got) { const [fx, fy] = toScreen(o.x, o.y - 24); hole(fx, fy, 30 * s, 0.9); }
+    else if (o.t === 'eyes' && !o.gone) eyes.push(o);
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(darkC, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.globalCompositeOperation = 'lighter';
   for (const [lx, ly] of lamps) {
-    const gr = ctx.createRadialGradient(lx, ly, 0, lx, ly, 120 * s);
-    gr.addColorStop(0, 'rgba(255,170,80,0.22)'); gr.addColorStop(1, 'rgba(255,170,80,0)');
-    ctx.fillStyle = gr; ctx.fillRect(lx - 120 * s, ly - 120 * s, 240 * s, 240 * s);
+    const gr = ctx.createRadialGradient(lx, ly, 0, lx, ly, 40 * s);
+    gr.addColorStop(0, 'rgba(255,170,80,0.35)'); gr.addColorStop(1, 'rgba(255,170,80,0)');
+    ctx.fillStyle = gr; ctx.fillRect(lx - 40 * s, ly - 40 * s, 80 * s, 80 * s);
+  }
+  if (flareAt) {
+    const [fx, fy, k] = flareAt, R = 300 * s;
+    const gr = ctx.createRadialGradient(fx, fy, 0, fx, fy, R);
+    gr.addColorStop(0, `rgba(255,90,50,${0.22 * k})`); gr.addColorStop(1, 'rgba(255,90,50,0)');
+    ctx.fillStyle = gr; ctx.fillRect(fx - R, fy - R, R * 2, R * 2);
   }
   ctx.globalCompositeOperation = 'source-over';
+  // glowing eyes watching from the dark
+  for (const o of eyes) {
+    if (Math.sin(time * 0.9 + o.ph * 3) < -0.82) continue;   // blink
+    const [ex, ey] = toScreen(o.x, o.y - 20);
+    ctx.fillStyle = 'rgba(214,255,110,0.25)'; ell(ex - 5 * s, ey, 7 * s, 5 * s); ctx.fill(); ell(ex + 5 * s, ey, 7 * s, 5 * s); ctx.fill();
+    ctx.fillStyle = '#e4ff8a'; ell(ex - 5 * s, ey, 2.4 * s, 1.6 * s); ctx.fill(); ell(ex + 5 * s, ey, 2.4 * s, 1.6 * s); ctx.fill();
+  }
 }
 
 // ============================================================
@@ -3042,6 +3341,33 @@ function drawScreenFX() {
   g.addColorStop(0, 'rgba(40,70,120,0)'); g.addColorStop(1, 'rgba(40,70,120,0.16)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   if (flashA > 0.01 && SAVE.settings.fx) { ctx.fillStyle = `rgba(255,255,255,${flashA})`; ctx.fillRect(0, 0, W, H); }
+  // snow-bomb splat on the "lens"
+  if (splashA > 0.01 && state === 'play') {
+    ctx.globalAlpha = Math.min(1, splashA * 1.3);
+    for (const b of splashBlobs) {
+      const r = b.r * Math.min(W, H);
+      const gr = ctx.createRadialGradient(b.x * W, b.y * H, r * 0.2, b.x * W, b.y * H, r);
+      gr.addColorStop(0, 'rgba(255,255,255,0.97)'); gr.addColorStop(0.75, 'rgba(240,246,252,0.85)'); gr.addColorStop(1, 'rgba(240,246,252,0)');
+      ctx.fillStyle = gr; ctx.fillRect(b.x * W - r, b.y * H - r, r * 2, r * 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // incoming ice ball warnings: a pulsing marker where the throw will come from
+  if (state === 'play') {
+    for (const b of iceballs) {
+      if (b.warn <= 0) continue;
+      const [sxx, syy] = toScreen(b.x, b.y);
+      const ex = clamp(sxx, 24, W - 24), ey = clamp(syy, 130, H - 70);
+      const pulse = 0.55 + 0.45 * Math.sin(time * 18);
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = 'rgba(90,168,224,0.35)'; ell(ex, ey, 22, 22); ctx.fill();
+      ctx.strokeStyle = '#5aa8e0'; ctx.lineWidth = 3; ell(ex, ey, 16 + (1 - b.warn / 0.9) * 6, 16 + (1 - b.warn / 0.9) * 6); ctx.stroke();
+      ctx.fillStyle = '#1e6fb8'; ell(ex, ey, 11, 11); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.font = `900 15px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('!', ex, ey + 1);
+      ctx.globalAlpha = 1;
+    }
+  }
   if ((state === 'play' || state === 'paused') && isAva()) {
     const prox = clamp(1 - (P.y - avaY) / 1000, 0, 1);
     if (prox > 0) {
@@ -3208,6 +3534,14 @@ function drawHUD() {
     drawPowerIcon(k, cx, cy, 1);
     px += 42;
   }
+  if (P.flare > 0) {
+    const cx = px + 18, cy = py + 18;
+    ctx.fillStyle = 'rgba(14,28,54,0.6)'; ell(cx, cy, 18, 18); ctx.fill();
+    ctx.fillStyle = '#ff6b3d'; ell(cx, cy, 14, 14); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx, cy, 16.5, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(P.flare / 8, 0, 1)); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 2, cy - 3, 4, 10); ctx.fillStyle = '#ffd27a'; ell(cx, cy - 5, 3, 4); ctx.fill();
+  }
 
   // centre widget: avalanche meter or mode badge
   let mx, my, mw;
@@ -3373,7 +3707,7 @@ function buildMenu() {
   const maps = $('maps');
   MAPS.forEach((m, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'card';
-    b.innerHTML = `<span class="art">${MAP_ART[m.id]}</span><span class="txt"><span class="nm">${m.name}</span><span class="ds">${m.desc}</span></span>`;
+    b.innerHTML = `<span class="art">${MAP_ART[m.id]}${rateBadge(m.rate)}</span><span class="txt"><span class="nm">${m.name}</span><span class="ds">${m.desc}</span></span>`;
     b.addEventListener('click', () => { initAudio(); selectMap(i); menuRow = 0; refreshMenu(); });
     noFocus(b); maps.appendChild(b);
   });
@@ -3549,7 +3883,7 @@ function refreshMenu() {
   [...$('diffs').children].forEach((c, i) => c.classList.toggle('sel', i === diffIdx));
   $('modeRow').classList.toggle('focus', menuRow === 1);
   $('diffRow').classList.toggle('focus', menuRow === 2);
-  const b = getBest(), tag = `${MAP.name} · ${MODE.name} · ${DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}`;
+  const b = getBest(), tag = `${MAP.name} (${RATINGS[MAP.rate]}) · ${MODE.name} · ${DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}`;
   $('bestLbl').textContent = b ? `Best on ${tag}: ${fmt(b)}` : tag;
 }
 function selectDiff(i) { diffIdx = i; DIFF = DIFFS[i]; saveSel(); refreshMenu(); }
@@ -3587,7 +3921,7 @@ function gameOver(reason) {
   endStroke();
   const titles = { buried: ['BURIED!', 'The avalanche caught up with you.'], wipeout: ['WIPEOUT!', 'One life — and that was it.'], end: ['RUN COMPLETE', 'Nice session!'] };
   $('overTitle').textContent = titles[reason][0];
-  $('overSub').textContent = `${titles[reason][1]}  ·  ${MAP.name} · ${MODE.name} · ${DIFF.name}`;
+  $('overSub').textContent = `${titles[reason][1]}  ·  ${MAP.name} (${RATINGS[MAP.rate]}) · ${MODE.name} · ${DIFF.name}`;
   $('overScore').textContent = fmt(score);
   const bl = $('overBest');
   bl.textContent = newBest ? '★ NEW BEST SCORE ★' : `Best: ${fmt(getBest())}`;

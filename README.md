@@ -5,11 +5,13 @@ A downhill skiing game that runs in your browser — one HTML file, no install.
 **To play:** download `index.html` and open it in any modern browser (Chrome, Edge, Firefox, Safari). Works on desktop and phones.
 
 ## Maps
-- **Pine Valley** — forest run with slalom gates, logs, moguls and ice
-- **Terrain Park** — kickers, gap jumps, XL kickers, rails, kinked & rainbow rails, tubes, boxes, hoops and P-A-R-K letters
-- **Glacier Pass** — slick ice, crevasses and frozen spires
-- **Deep Glades** — deep-powder tree skiing: duck low branches, thread tight gaps, escape tree wells, link powder turns
-- **Midnight Woods** — ski by lantern light and headlamp
+| Map | Rating | Special feature |
+|---|---|---|
+| **Pine Valley** | 🟢 Easy | Forest run with slalom gates, logs and moguls — a snowcat grooms the slope; ride its fresh corduroy for speed |
+| **Terrain Park** | 🟢 Easy | Kickers, gap jumps, XL kickers, rails, kinked & rainbow rails, tubes, boxes, hoops, P-A-R-K letters and **judges' zones** (tricks ×1.5) |
+| **Glacier Pass** | 🟦 Intermediate | Slick ice, crevasses and frozen spires — **ice balls** are lobbed slowly across the slope |
+| **Deep Glades** | ◆ Advanced | Deep-powder tree skiing: duck branches, thread gaps, escape tree wells — and dodge **snow bombs** from the trees |
+| **Midnight Woods** | ◆◆ Expert | **Pitch black** — only your headlamp and flares light the way, and something is watching |
 
 ## Modes & difficulty
 - **Avalanche** — outrun the slide; crashes cost time
