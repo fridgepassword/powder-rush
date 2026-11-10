@@ -36,4 +36,4 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 Touch: hold left/right to steer (spin in the air), hold the middle to tuck (grab in the air), swipe up to jump, swipe up/down in the air to flip.
 
 ## Extras
-Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis, tree styles, snow colours, trails and weather.
+Pick a **boy or girl rider** on the menu (every outfit fits both). Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis, tree styles, snow colours, trails and weather.

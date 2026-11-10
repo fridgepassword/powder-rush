@@ -108,6 +108,9 @@
   .rider canvas, #lockerPrev { display: block; border-radius: 12px; background: radial-gradient(circle at 50% 72%, #f7fbff 0, #c4d4e8 78%); flex: none; }
   .rider canvas { width: 104px; height: 116px; }
   .rider .nm { font-size: 16px; }
+  .seg { display: flex; gap: 6px; margin-top: 9px; }
+  .seg .btn.small { padding: 6px 13px; }
+  .seg .btn.on { background: var(--gold); color: var(--ink); border-color: transparent; }
   .mission { display: flex; gap: 9px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.25; }
   .mission:first-child { border-top: none; }
   .mission .rw { margin-left: auto; color: #9fdcff; font-weight: 800; white-space: nowrap; padding-left: 6px; }
@@ -179,7 +182,7 @@
         <div id="diffRow" class="row"><div id="diffs" class="diffs"></div></div>
         <button id="go" class="go" type="button">DROP IN ▸</button>
         <span id="bestLbl" class="best"></span>
-        <div class="foot keysonly">Menu: <kbd>←</kbd><kbd>→</kbd> pick · <kbd>↑</kbd><kbd>↓</kbd> row · <kbd>Enter</kbd> drop in · <kbd>B</kbd> shop · <kbd>H</kbd> how to play · <kbd>M</kbd> mute</div>
+        <div class="foot keysonly">Menu: <kbd>←</kbd><kbd>→</kbd> pick · <kbd>↑</kbd><kbd>↓</kbd> row · <kbd>Enter</kbd> drop in · <kbd>B</kbd> shop · <kbd>G</kbd> boy / girl · <kbd>H</kbd> how to play · <kbd>M</kbd> mute</div>
       </div>
       <div class="side">
         <div class="side-card">
@@ -187,7 +190,8 @@
           <div class="rider">
             <canvas id="riderPrev" width="208" height="232"></canvas>
             <div><span id="riderName" class="nm">Classic Blue</span><span id="riderSki" class="ds">Race Red skis</span>
-              <button id="lockerBtn2" class="btn small" type="button" style="margin-top:10px">Shop gear</button></div>
+              <div class="seg"><button id="riderGuy" class="btn small" type="button">Boy</button><button id="riderGirl" class="btn small" type="button">Girl</button></div>
+              <button id="lockerBtn2" class="btn small" type="button" style="margin-top:8px">Shop gear</button></div>
           </div>
         </div>
         <div class="side-card">
@@ -496,6 +500,7 @@ const SAVE = (() => {
   return {
     coins: Math.max(0, s.coins | 0),
     owned: Array.isArray(s.owned) ? s.owned : [],
+    rider: s.rider === 'girl' ? 'girl' : 'guy',
     suit: s.suit || 'classic', ski: s.ski || 'red', tree: s.tree || 'pine', snow: s.snow || 'classic', trail: s.trail || 'classic', weather: s.weather || 'snow',
     missions: Array.isArray(s.missions) ? s.missions.filter(id => MISSION_POOL.some(m => m.id === id)) : [],
     settings: Object.assign({ shake: true, gauge: true, snow: true, fx: true }, s.settings || {}),
@@ -792,6 +797,7 @@ function onPress(k) {
     if (subOpen()) { if (k === 'Escape' || k === 'Enter') closeSubs(); return; }
     if (k === 'KeyB') { openSub('locker'); return; }
     if (k === 'KeyH') { openSub('how'); return; }
+    if (k === 'KeyG') { setRider(SAVE.rider === 'girl' ? 'guy' : 'girl'); return; }
     if (k === 'Enter' || k === 'Space') { startGame(); return; }
     if (k === 'ArrowUp' || k === 'KeyW') menuRow = Math.max(0, menuRow - 1);
     else if (k === 'ArrowDown' || k === 'KeyS') menuRow = Math.min(2, menuRow + 1);
@@ -1743,7 +1749,7 @@ function spawnRival() {
     const x = rand(-COURSE_HALF + 90, COURSE_HALF - 90), y = v.bottom + rand(80, 260);
     if (solidNear(x, y, 50)) continue;
     npcs.push({ x, y, ang: 0, speed: rand(230, 330), target: rand(240, 340), ph: rand(0, TAU), turn: 0,
-      suit: makeSuit(pick(SUITS).id, pick(SKIS).id), name: pick(RIVAL_NAMES), crashT: 0, rel: -1 });
+      suit: makeSuit(pick(SUITS).id, pick(SKIS).id, pick(['guy', 'girl']), pick(HAIRS)), name: pick(RIVAL_NAMES), crashT: 0, rel: -1 });
     return;
   }
 }
@@ -3016,9 +3022,11 @@ const RIG_SIDES = [['L', -1], ['R', 1]];
 const RIG_JOINTS = ['pelvis', 'neck', 'head', 'chest', 'ankL', 'ankR', 'kneeL', 'kneeR', 'hipL', 'hipR', 'shL', 'shR', 'elbL', 'elbR', 'handL', 'handR', 'poleL', 'poleR'];
 const RIG_TONE = {};
 const rigTone = c => RIG_TONE[c] || (RIG_TONE[c] = { hi: shade(c, 0.32), lo: shade(c, -0.3) });
-function makeSuit(suitId, skiId) {
+const HAIRS = ['#8a4b24', '#f0c463', '#2a1c14', '#c2452d'];
+// rider: 'guy' or 'girl' (defaults to the saved choice); the girl gets a slimmer build and a ponytail in `hair`
+function makeSuit(suitId, skiId, rider, hair) {
   const s = SUITS.find(x => x.id === suitId) || SUITS[0], k = SKIS.find(x => x.id === skiId) || SKIS[0];
-  return { jacket: s.jacket, sleeve: s.sleeve, accent: s.accent, pants: s.pants, helmet: s.helmet, lens: s.lens,
+  return { girl: (rider || SAVE.rider) === 'girl', hair: hair || HAIRS[0], jacket: s.jacket, sleeve: s.sleeve, accent: s.accent, pants: s.pants, helmet: s.helmet, lens: s.lens,
     boot: '#4a5266', glove: s.accent, skin: '#f1c39b', ski: k.col, skiBase: shade(k.col, -0.5), skiEdge: '#141a26', pole: '#aab2c0',
     pack: shade(s.pants, s.pants === s.jacket ? -0.25 : 0.12), trim: shade(s.jacket, -0.38), visor: shade(s.helmet, -0.34), stripes: s.id === 'tiger' };
 }
@@ -3111,10 +3119,11 @@ function rigPose(o) {
   const side = [ct, -st, 0];
   const front = [spine[1] * side[2] - spine[2] * side[1], spine[2] * side[0] - spine[0] * side[2], spine[0] * side[1] - spine[1] * side[0]];
   p.chest = v3lerp(pv, p.neck, 0.7);
+  const girl = (o.suit || SUIT).girl, shW = girl ? 4.8 : 5.8, hipW = girl ? 3.4 : 3.2;
   for (const [s, sg] of RIG_SIDES) {
-    const ank = p['ank' + s], hip = p['hip' + s] = [pv[0] + sg * 3.2, pv[1], pv[2] - 0.6];
+    const ank = p['ank' + s], hip = p['hip' + s] = [pv[0] + sg * hipW, pv[1], pv[2] - 0.6];
     p['knee' + s] = ik2(hip, ank, RIG_LEN.thigh, RIG_LEN.shin, sg * 0.25, 1, 0.2);
-    const sh = p['sh' + s] = v3add(v3add(p.neck, side, sg * 5.8), spine, -1.7);
+    const sh = p['sh' + s] = v3add(v3add(p.neck, side, sg * shW), spine, -1.7);
     let h = rz(hand[s]), pd = poleDir[s];
     pd = [pd[0] * ct + pd[1] * st, -pd[0] * st + pd[1] * ct, pd[2]];
     if (onSki[s] !== undefined) {
@@ -3172,7 +3181,7 @@ function capPath(ax, ay, ra, bx, by, rb, append) {
 }
 const RIG_OUT = 'rgba(10,16,30,0.82)', RIG_IN = 'rgba(10,16,30,0.3)';
 function drawRig(o) {
-  const S = o.suit || SUIT, t = o.t === undefined ? time : o.t;
+  const S = o.suit || SUIT, girl = S.girl, t = o.t === undefined ? time : o.t;
   const p = rigPose(o);
   const X = rigXf(o.yaw, o.flip, o.roll, o.pivot);
   const T = {};
@@ -3204,34 +3213,49 @@ function drawRig(o) {
       bar(at(4.4, 0, 0.8), at(5.8, 0, 0.8), 2.6, '#1b1f29');
     }
     cap(T['ank' + s], at(3.9, 0, 1.3), 2.8, 2.4, S.boot);
-    cap(T['hip' + s], T['knee' + s], 3.1, 2.7, S.pants);
-    cap(T['knee' + s], T['ank' + s], 2.6, 2.9, S.pants);
+    cap(T['hip' + s], T['knee' + s], girl ? 2.9 : 3.1, girl ? 2.4 : 2.7, S.pants);
+    cap(T['knee' + s], T['ank' + s], girl ? 2.3 : 2.6, girl ? 2.7 : 2.9, S.pants);
   }
   // ---- torso: jacket, backpack on the back, stripe / zip / pack straps on the chest
-  cap(T.pelvis, T.chest, 4.7, 5.3, S.jacket);
-  cap(T.shL, T.shR, 3.1, 3.1, S.jacket);
-  cap(torso(0.2, -4.7, 0), torso(0.8, -5, 0), 3.2, 3.5, S.pack);
-  bar(torso(0.52, -7.7, -2.2), torso(0.52, -7.7, 2.2), 1.4, S.accent);
-  bar(torso(0.56, 5, -4.3), torso(0.56, 5, 4.3), 2.5, S.accent);
-  bar(torso(0.12, 4.7, 0), torso(0.9, 4.4, 0), 0.9, S.trim);
-  for (const sd of [-3.4, 3.4]) bar(torso(0.97, 3.6, sd), torso(0.4, 5, sd * 1.1), 1.3, S.pack);
-  if (S.stripes) for (const f of [0.22, 0.4, 0.74]) bar(torso(f, 5, -4.2), torso(f + 0.09, 5, 4.2), 1.5, S.accent);
+  // (the girl's jacket is nipped in at the waist and flares over the hips; `cw` / `cf` fit the chest details to her slimmer build)
+  const cw = girl ? 0.86 : 1, cf = girl ? 4.4 : 5;
+  if (girl) {
+    const waist = torso(0.36, 0, 0);
+    cap(T.pelvis, waist, 4.5, 4, S.jacket);
+    cap(waist, T.chest, 4, 4.7, S.jacket);
+    cap(T.hipL, T.hipR, 3.2, 3.2, S.jacket);
+    cap(T.shL, T.shR, 2.8, 2.8, S.jacket);
+  } else {
+    cap(T.pelvis, T.chest, 4.7, 5.3, S.jacket);
+    cap(T.shL, T.shR, 3.1, 3.1, S.jacket);
+  }
+  cap(torso(0.2, -4.7 * cw, 0), torso(0.8, -5 * cw, 0), 3.2 * cw, 3.5 * cw, S.pack);
+  bar(torso(0.52, -7.7 * cw, -2.2 * cw), torso(0.52, -7.7 * cw, 2.2 * cw), 1.4, S.accent);
+  bar(torso(0.56, cf, -4.3 * cw), torso(0.56, cf, 4.3 * cw), 2.5, S.accent);
+  bar(torso(0.12, cf - 0.3, 0), torso(0.9, cf - 0.6, 0), 0.9, S.trim);
+  for (const sd of [-3.4 * cw, 3.4 * cw]) bar(torso(0.97, cf - 1.4, sd), torso(0.4, cf, sd * 1.1), 1.3, S.pack);
+  if (S.stripes) for (const f of [0.22, 0.4, 0.74]) bar(torso(f, cf, -4.2 * cw), torso(f + 0.09, cf, 4.2 * cw), 1.5, S.accent);
   // ---- arms, gloves, poles
   for (const [s] of RIG_SIDES) {
     const hd = T['hand' + s], tip = T['pole' + s];
     bar(hd, tip, 1.3, S.pole, true);
     const bk = v3lerp(hd, tip, 0.9); ball(bk, 1.5, '#39404e');
-    cap(T['sh' + s], T['elb' + s], 2.7, 2.4, S.jacket);
-    cap(T['elb' + s], hd, 2.3, 2, S.sleeve);
-    ball(hd, 2.3, S.glove, hd[2] + 0.5);
+    cap(T['sh' + s], T['elb' + s], girl ? 2.4 : 2.7, girl ? 2.1 : 2.4, S.jacket);
+    cap(T['elb' + s], hd, girl ? 2 : 2.3, girl ? 1.8 : 2, S.sleeve);
+    ball(hd, girl ? 2.1 : 2.3, S.glove, hd[2] + 0.5);
   }
   // ---- head: helmet with a crest stripe, goggles on a strap, face and a gaiter at the neck
   const hd = p.head, chy = Math.cos(p.headYaw), shy = Math.sin(p.headYaw);
   const hf = (x, y, z) => X([hd[0] + x * chy + y * shy, hd[1] - x * shy + y * chy, hd[2] + z]);
   ball(X([p.neck[0], p.neck[1], p.neck[2] + 0.4]), 2.8, S.accent);
-  parts.push({ k: 1, a: T.head, r: 5.4, col: S.helmet, d: T.head[2], shine: true });
+  parts.push({ k: 1, a: T.head, r: girl ? 5.2 : 5.4, col: S.helmet, d: T.head[2], shine: true });
   const face = hf(0, 3, -2.6);
   ball(face, 2.7, S.skin, face[2] + 1.5);
+  if (girl) {
+    // hair showing under the helmet: gathered at the nape, with a lock either side of the face
+    ball(hf(0, -3.4, -3.3), 3, S.hair);
+    for (const sg of [-1, 1]) cap(hf(sg * 3.7, 2.5, -1.6), hf(sg * 4, 1.5, -6), 1.4, 1, S.hair);
+  }
   let prev = null;
   for (let a = 40; a <= 160; a += 30) {
     const r = a * Math.PI / 180, cur = hf(0, Math.cos(r) * 4.2, Math.sin(r) * 4.2);
@@ -3248,20 +3272,29 @@ function drawRig(o) {
   }
   const gg = hf(0, 4.6, 0.3), gr = hf(1, 4.6, 0.3), gu = hf(0, 4.6, 1.3);
   parts.push({ k: 3, a: gg, ang: Math.atan2(gr[1] - gg[1], gr[0] - gg[0]), sc: Math.hypot(gr[0] - gg[0], gr[1] - gg[1]), su: Math.hypot(gu[0] - gg[0], gu[1] - gg[1]), d: gg[2] + 2 });
-  // ---- scarf streaming in the wind (world space, so it trails the direction of travel through spins and flips)
+  // ---- the girl's ponytail, or the short loose end of the boy's scarf (kept stubby so it can't be mistaken for hair), streaming in the
+  // wind — world space, so it trails the direction of travel through spins and flips
   const wind = o.wind || [0, 0], wl = Math.hypot(wind[0], wind[1]), wm = Math.min(1, wl);
   const ux = wl > 0.01 ? wind[0] / wl : 0, uy = wl > 0.01 ? wind[1] / wl : -1;
-  const sa = X(v3add(v3add(p.neck, front, -2.6), side, -2.4));
-  prev = sa;
-  for (let i = 1; i <= 8; i++) {
-    const f = i / 8, len = i * 1.9 * (0.4 + 0.6 * wm), wv = Math.sin(t * 13 - i * 0.7) * (0.2 + 1.5 * f) * (0.3 + wm);
-    const x = sa[3] + ux * len - uy * wv - 0.3 * len * (1 - Math.abs(ux)) * wm;
-    const y = sa[4] + uy * len + ux * wv;
-    const z = sa[5] - (1 - wm) * (f * 8 + 1) - f * 3.5 * wm + Math.cos(t * 11 - i * 0.6) * 0.8 * f * wm;
-    const cur = [x, y * 0.8 - z, y + z * 1.25, x, y, z];
-    bar(prev, cur, 2.5 - f * 1.3, S.accent, true);
-    prev = cur;
-  }
+  // n links of length `seg` from anchor `a`: hangs `hang` down when still, flies out along the wind when moving
+  // (`bias` pushes it to one side when heading straight down the hill, so it shows past the body; `curl` bends it that way)
+  const stream = (a, n, seg, hang, wave, bias, curl, put) => {
+    let from = a;
+    for (let i = 1; i <= n; i++) {
+      const f = i / n, len = i * seg * (0.4 + 0.6 * wm), wv = Math.sin(t * 13 - i * 0.7) * (0.2 + 1.5 * f) * (0.3 + wm) * wave;
+      const x = a[3] + ux * len - uy * wv + bias * (1 + curl * (f - 0.5)) * len * (1 - Math.abs(ux)) * wm;
+      const y = a[4] + uy * len + ux * wv;
+      const z = a[5] - (1 - wm) * (f * hang + 1) - f * 3.5 * wm + Math.cos(t * 11 - i * 0.6) * 0.8 * f * wm * wave;
+      const to = [x, y * 0.8 - z, y + z * 1.25, x, y, z];
+      put(from, to, i, f);
+      from = to;
+    }
+  };
+  if (girl) {
+    const tie = hf(0, -4.6, -1.6), R = [1.6, 2.2, 2.4, 2.2, 1.9, 1.6, 1.2, 0.8];
+    stream(tie, 7, 2, 10, 0.9, 0.42, 1.3, (a, b, i) => cap(a, b, R[i - 1], R[i], S.hair));
+    ball(tie, 2.1, S.accent, tie[2] + 1);
+  } else stream(X(v3add(v3add(p.neck, front, -2.6), side, -2.4)), 3, 1.5, 3, 0.6, -0.3, 0, (a, b, i, f) => bar(a, b, 2.6 - f * 0.9, S.accent, true));
 
   if (o.shadowZ !== undefined) drawRigShadow(parts, o.shadowZ);
   parts.sort((a, b) => a.d - b.d);
@@ -4131,6 +4164,8 @@ function buildMenu() {
   bind('pauseBtn', pause);
   bind('lockerBtn', () => openSub('locker'));
   bind('lockerBtn2', () => openSub('locker'));
+  bind('riderGuy', () => setRider('guy'));
+  bind('riderGirl', () => setRider('girl'));
   bind('howBtn', () => openSub('how'));
   bind('setBtn', () => openSub('settings'));
   bind('lockerClose', closeSubs);
@@ -4266,6 +4301,8 @@ function renderPreviews() {
 function refreshMenu() {
   for (const el of document.querySelectorAll('.coinLbl')) el.textContent = fmt(SAVE.coins);
   $('riderName').textContent = equipped('suit').name;
+  $('riderGuy').classList.toggle('on', SAVE.rider !== 'girl');
+  $('riderGirl').classList.toggle('on', SAVE.rider === 'girl');
   $('riderSki').textContent = `${equipped('ski').name} skis · ${equipped('trail').name}`;
   const ml = $('missionList'); ml.innerHTML = '';
   for (const id of SAVE.missions) {
@@ -4289,6 +4326,7 @@ function selectMap(i) {
   mapIdx = i; MAP = MAPS[i]; saveSel(); reset(); refreshMenu();
 }
 function selectMode(i) { modeIdx = i; MODE = MODES[i]; saveSel(); refreshMenu(); }
+function setRider(r) { SAVE.rider = r; persist(); applyCosmetics(); refreshMenu(); }
 function showMenu() { if (state === 'paused' || state === 'play') settleRun(); setState('menu'); reset(); refreshMenu(); }
 function startGame() {
   initAudio();
