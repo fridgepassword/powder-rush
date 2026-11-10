@@ -523,7 +523,7 @@ function tri(g, a, b, c, d, e, f) { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   const f = ch => clamp(Math.round(amt > 0 ? ch + (255 - ch) * amt : ch * (1 + amt)), 0, 255);
-  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+  return '#' + ((1 << 24) | (f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).slice(1);
 }
 function makeTreeSprite(v, pal) {
   const S = 2, w = 100, h = 140, cx = 50, base = 134;
@@ -903,7 +903,7 @@ function reset() {
     spin: 0, spinTotal: 0, flip: 0, flipTotal: 0, grabs: {}, grabMask: 0,
     grind: null, crashT: 0, cvx: 0, cvy: 0, invuln: 0, hopCD: 0,
     tuck: false, brake: false, turn: 0, onIce: false, onMogul: false,
-    tuckAmt: 0, wobble: 0, gapEnd: 0, crashMax: 1, crashSide: 1, stuck: 0, wellCD: 0, turnDir: 0, turnHold: 0, turnChain: 0, lastTurnT: -9, flare: 0, judgeEnd: 0, onCord: false,
+    tuckAmt: 0, airAmt: 0, plowAmt: 0, grabAmt: 0, grabPose: null, grabPoseMask: 0, squash: 0, wobble: 0, gapEnd: 0, crashMax: 1, crashSide: 1, stuck: 0, wellCD: 0, turnDir: 0, turnHold: 0, turnChain: 0, lastTurnT: -9, flare: 0, judgeEnd: 0, onCord: false,
     pw: { magnet: 0, shield: 0, boost: 0, double: 0, ghost: 0 },
   };
   letters = 0; comboT = 0; npcs = []; npcTimer = rand(4, 7); airTrail = []; flashA = 0; confetti = [];
@@ -1525,6 +1525,7 @@ function awardAir(r) {
 }
 function land() {
   const r = evalAir();
+  P.squash = clamp(0.45 + P.airDur * 0.5, 0.5, 1);
   P.air = 0; P.z = 0; P.vz = 0;
   puff(P.x, P.y, 12);
   if (!r) { resetTricks(); P.gapEnd = 0; crash(pick(['Bailed!', 'Yard sale!', 'Faceplant!']), null); return; }
@@ -2172,6 +2173,14 @@ function updatePlay(dt) {
       }
     }
   }
+  // rider pose blends: ease between ground, air, snowplough and grab stances; landing compression springs back
+  const pk = Math.min(1, dt * 11), gi = P.air ? grabInfo(P.grabMask) : null;
+  P.airAmt += ((P.air ? 1 : 0) - P.airAmt) * pk;
+  P.plowAmt += ((P.brake && !P.air && !P.grind ? 1 : 0) - P.plowAmt) * pk;
+  if (gi) { if (P.grabPoseMask !== P.grabMask) P.grabAmt *= 0.45; P.grabPose = gi[2]; P.grabPoseMask = P.grabMask; }
+  P.grabAmt += ((gi ? 1 : 0) - P.grabAmt) * Math.min(1, dt * 14);
+  if (!gi && P.grabAmt < 0.02) { P.grabAmt = 0; P.grabPose = null; P.grabPoseMask = 0; }
+  P.squash = Math.max(0, P.squash - dt * 3.2);
   // air trail ribbon
   if (P.air && P.crashT <= 0) airTrail.push({ x: P.x, y: P.y, z: P.z + P.gz + 16, t: time });
   while (airTrail.length && (time - airTrail[0].t > 0.45 || airTrail.length > 60)) airTrail.shift();
@@ -2979,8 +2988,12 @@ function drawCritter(o) {
 function drawRival(n) {
   ctx.fillStyle = 'rgba(55,85,135,0.14)'; ell(n.x, n.y + 1, 13, 4.5); ctx.fill();
   ctx.save(); ctx.translate(n.x, n.y);
-  if (n.crashT > 0) drawRig({ yaw: n.ang, flip: 0.3, roll: 1.4, pivot: 3, tuck: 0.5, grab: null, skis: false, suit: n.suit, shadowZ: 0 });
-  else drawRig({ yaw: n.ang, flip: 0, roll: clamp(n.turn, -1, 1) * 0.3, pivot: 14, tuck: 0.35, grab: null, plow: false, suit: n.suit, shadowZ: 0 });
+  if (n.crashT > 0) drawRig({ yaw: n.ang, flip: 0.3, roll: 1.4, pivot: 3, tuck: 0.3, sprawl: 1, grab: null, skis: false, suit: n.suit, shadowZ: 0, wind: [0, -0.15] });
+  else {
+    const e = clamp(n.turn, -1, 1) * 0.3;
+    drawRig({ yaw: n.ang, flip: 0, roll: e, edge: e, pivot: 14, tuck: 0.35, grab: null, plow: false, suit: n.suit, shadowZ: 0,
+      lean: 0.8, twist: -n.ang * 0.3, look: clamp(n.turn, -1, 1) * 0.3, wind: [-Math.sin(n.ang) * 0.8, -Math.cos(n.ang) * 0.8] });
+  }
   ctx.restore();
   ctx.font = `800 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(14,28,54,0.75)'; ctx.strokeText(n.name, n.x, n.y - 46);
@@ -2988,59 +3001,157 @@ function drawRival(n) {
 }
 
 // ---- 3D skier rig: body-space points (X = skier's right, Y = forward, Z = up), posed, rotated and projected
-const RIG_STAND = {
-  ankL: [-4.5, 0, 2], ankR: [4.5, 0, 2], kneeL: [-4.2, 3.5, 8.5], kneeR: [4.2, 3.5, 8.5],
-  hipL: [-3.3, -0.5, 14], hipR: [3.3, -0.5, 14], pelvis: [0, -0.5, 14.5], neck: [0, 1.5, 25],
-  shL: [-6.2, 1, 23.5], shR: [6.2, 1, 23.5], handL: [-9.5, 7, 15.5], handR: [9.5, 7, 15.5],
-  head: [0, 2.5, 30.5], poleL: [-10.5, -6, 0], poleR: [10.5, -6, 0],
+// Stance control points (right-hand side; the left mirrors). Knees and elbows are solved from these,
+// so limbs keep their length however the stances are blended.
+const RIG_POSES = {
+  stand: { pelvis: [0, -0.8, 14.6], neck: [0, 1.8, 25.2], head: [0, 3, 30.9], ank: [4.6, 0, 2.2], hand: [9, 6.5, 15], pole: [11, -7, 0.4] },
+  tuck: { pelvis: [0, -3.2, 10], neck: [0, 4.6, 17.4], head: [0, 8, 21.2], ank: [4.4, 0, 2.2], hand: [4.6, 11, 12.5], pole: [6.5, -12, 14] },
+  air: { pelvis: [0, -1.4, 13.6], neck: [0, 2.4, 24], head: [0, 3.8, 29.7], ank: [5, 0.6, 4.6], hand: [15, 3, 20.5], pole: [20, -8, 14] },
+  brake: { pelvis: [0, -2.8, 12.6], neck: [0, 0.6, 23.2], head: [0, 2, 28.9], ank: [6.4, 0, 2.2], hand: [10.5, 8.5, 15.5], pole: [14, -2, 0.4] },
+  grab: { pelvis: [0, -1.2, 13.2], neck: [0, 3.4, 22.8], head: [0, 5.4, 28.2], ank: [4.4, 1.5, 8.5], hand: [13, -2, 23.5], pole: [20, -12, 26] },
+  sprawl: { pelvis: [0, -1, 13], neck: [0, 0.6, 23.4], head: [0, 1.4, 29], ank: [7, 1, 3.5], hand: [12, 1, 24], pole: [18, -6, 26] },
 };
-const RIG_TUCK = {
-  ankL: [-4.5, 0, 2], ankR: [4.5, 0, 2], kneeL: [-4, 6.5, 6.5], kneeR: [4, 6.5, 6.5],
-  hipL: [-3.3, -3, 9.5], hipR: [3.3, -3, 9.5], pelvis: [0, -3, 10], neck: [0, 4.5, 17.5],
-  shL: [-6.2, 4, 16.5], shR: [6.2, 4, 16.5], handL: [-5.5, 11, 11.5], handR: [5.5, 11, 11.5],
-  head: [0, 8, 21], poleL: [-7, -13, 13], poleR: [7, -13, 13],
-};
-const GRAB_HANDS = {
-  nose: [[-4.5, 13, 3.5], [4.5, 13, 3.5]], tail: [[-4.5, -11, 3.5], [4.5, -11, 3.5]],
-  side: [[-7.5, 1, 4], [7.5, 1, 4]], both: [[-4.5, 13, 3.5], [4.5, -11, 3.5]],
-};
+const RIG_LEN = { thigh: 7.4, shin: 7.4, upArm: 6.3, foreArm: 6.1, pole: 19 };
+const RIG_SIDES = [['L', -1], ['R', 1]];
+const RIG_JOINTS = ['pelvis', 'neck', 'head', 'chest', 'ankL', 'ankR', 'kneeL', 'kneeR', 'hipL', 'hipR', 'shL', 'shR', 'elbL', 'elbR', 'handL', 'handR', 'poleL', 'poleR'];
+const RIG_TONE = {};
+const rigTone = c => RIG_TONE[c] || (RIG_TONE[c] = { hi: shade(c, 0.32), lo: shade(c, -0.3) });
 function makeSuit(suitId, skiId) {
   const s = SUITS.find(x => x.id === suitId) || SUITS[0], k = SKIS.find(x => x.id === skiId) || SKIS[0];
   return { jacket: s.jacket, sleeve: s.sleeve, accent: s.accent, pants: s.pants, helmet: s.helmet, lens: s.lens,
-    boot: '#3b4252', glove: '#1b1f29', skin: '#f1c39b', ski: k.col, skiEdge: '#141a26', pole: '#5d6472', stripes: s.id === 'tiger' };
+    boot: '#4a5266', glove: s.accent, skin: '#f1c39b', ski: k.col, skiBase: shade(k.col, -0.5), skiEdge: '#141a26', pole: '#aab2c0',
+    pack: shade(s.pants, s.pants === s.jacket ? -0.25 : 0.12), trim: shade(s.jacket, -0.38), visor: shade(s.helmet, -0.34), stripes: s.id === 'tiger' };
 }
 let SUIT = makeSuit(SAVE.suit, SAVE.ski);
 
-function rigPose(tuck, grab) {
-  const p = {};
-  for (const k in RIG_STAND) { const a = RIG_STAND[k], b = RIG_TUCK[k]; p[k] = [lerp(a[0], b[0], tuck), lerp(a[1], b[1], tuck), lerp(a[2], b[2], tuck)]; }
-  if (grab) {
-    const h = GRAB_HANDS[grab];
-    p.handL = h[0].slice(); p.handR = h[1].slice();
-    p.poleL = [p.handL[0] - 2, p.handL[1] - 15, p.handL[2] + 4];
-    p.poleR = [p.handR[0] + 2, p.handR[1] - 15, p.handR[2] + 4];
+const v3lerp = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+const v3add = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+// two-bone joint solve: where the knee/elbow sits between root a and end b, bent toward (px,py,pz).
+// An end that is out of reach is pulled in (b is updated).
+function ik2(a, b, l1, l2, px, py, pz) {
+  let dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+  let d = Math.hypot(dx, dy, dz) || 0.001;
+  const max = (l1 + l2) * 0.995;
+  if (d > max) { const k = max / d; dx *= k; dy *= k; dz *= k; d = max; b[0] = a[0] + dx; b[1] = a[1] + dy; b[2] = a[2] + dz; }
+  const ux = dx / d, uy = dy / d, uz = dz / d;
+  const along = (l1 * l1 - l2 * l2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, l1 * l1 - along * along));
+  const dot = px * ux + py * uy + pz * uz;
+  px -= ux * dot; py -= uy * dot; pz -= uz * dot;
+  const pl = Math.hypot(px, py, pz) || 1;
+  return [a[0] + ux * along + px / pl * h, a[1] + uy * along + py / pl * h, a[2] + uz * along + pz / pl * h];
+}
+// o: tuck, air, plowAmt, grab (+grabMask, grabAmt), sprawl, squash, lean, edge, twist, look, spread, flail, t
+function rigPose(o) {
+  const R = RIG_POSES, t = o.t === undefined ? time : o.t;
+  const air = o.air || 0, plow = o.plowAmt === undefined ? (o.plow ? 1 : 0) : o.plowAmt;
+  const grabAmt = o.grab ? (o.grabAmt === undefined ? 1 : o.grabAmt) : 0;
+  const blend = [[R.tuck, o.tuck || 0], [R.brake, plow], [R.air, air], [R.grab, grabAmt], [R.sprawl, o.sprawl || 0]];
+  const c = {};
+  for (const k in R.stand) { let v = R.stand[k]; for (const [pose, w] of blend) if (w > 0) v = v3lerp(v, pose[k], Math.min(1, w)); c[k] = v; }
+  const p = { pelvis: c.pelvis.slice(), neck: c.neck.slice(), head: c.head.slice() };
+  const hand = {}, poleDir = {}, ski = {};
+  for (const [s, sg] of RIG_SIDES) {
+    p['ank' + s] = [c.ank[0] * sg, c.ank[1], c.ank[2]];
+    hand[s] = [c.hand[0] * sg, c.hand[1], c.hand[2]];
+    poleDir[s] = [(c.pole[0] - c.hand[0]) * sg, c.pole[1] - c.hand[1], c.pole[2] - c.hand[2]];
+    ski[s] = { yaw: -sg * 0.34 * plow, pitch: 0 };
   }
-  for (const [s, sg] of [['L', -1], ['R', 1]]) {
-    const sh = p['sh' + s], hd = p['hand' + s];
-    p['elb' + s] = [(sh[0] + hd[0]) / 2 + sg * 2.4, (sh[1] + hd[1]) / 2 - 1, (sh[2] + hd[2]) / 2 - 1.5];
+  // rail / balance stance: arms out wide
+  if (o.spread) for (const [s, sg] of RIG_SIDES) hand[s] = v3lerp(hand[s], [R.air.hand[0] * sg, R.air.hand[1], R.air.hand[2] - 2], o.spread);
+  // landing compression, a little forward drive at speed, breathing when standing still
+  const q = o.squash || 0, sp = (o.lean || 0) * (1 - air), br = Math.sin(t * 2.4) * 0.3 * (1 - (o.lean || 0)) * (1 - air);
+  p.pelvis[1] -= 1.2 * q; p.pelvis[2] -= 3.4 * q + 0.7 * sp;
+  p.neck[1] += 1.6 * q + 1.1 * sp; p.neck[2] += br - 4.6 * q - 0.9 * sp;
+  p.head[1] += 2.2 * q + 1.4 * sp; p.head[2] += br * 1.2 - 5 * q - sp;
+  hand.L[2] += br * 0.6 - 3 * q; hand.R[2] += br * 0.6 - 3 * q;
+  // carving: skis stay on the snow while the body leans in, so the inside leg folds and the outside leg stretches;
+  // shoulders stay more level than the hips and the inside hand drops toward the snow
+  const e = o.edge || 0;
+  if (e) {
+    const te = Math.tan(e), ae = Math.abs(e), ins = e > 0 ? 'R' : 'L', out = e > 0 ? 'L' : 'R';
+    p.ankR[2] += 4.6 * te; p.ankL[2] -= 4.6 * te;
+    p['ank' + ins][1] += 5 * ae; p['ank' + out][1] -= 2 * ae;
+    p.neck[0] -= e * 5; p.head[0] -= e * 7.5;
+    hand[ins][2] -= 9 * ae; hand[ins][0] += Math.sign(e) * 5 * ae; hand[out][2] += 4 * ae;
   }
+  // off balance: windmilling arms
+  const fl = o.flail || 0;
+  if (fl) for (const [s, sg] of RIG_SIDES) {
+    hand[s][0] += sg * (3 + Math.cos(t * 19 + sg) * 2) * fl;
+    hand[s][1] -= 2 * fl;
+    hand[s][2] += (3 + Math.sin(t * 22 + sg * 1.3) * 5) * fl;
+  }
+  // grabs: legs folded up, skis tilted or crossed, the grabbing hand on a ski and the other thrown out for style
+  let twist = o.twist || 0;
+  const onSki = {};
+  if (grabAmt > 0) {
+    const m = o.grabMask || ({ nose: 1, tail: 2, side: 4, both: 3 })[o.grab] || 3, g = grabAmt;
+    const W = m & 1, Sk = m & 2, A = m & 4, D = m & 8;
+    const pitch = (W && !Sk ? 0.42 : Sk && !W ? -0.42 : A && D ? -0.3 : 0) * g;
+    const cross = (A && D ? 0.32 : A || D ? 0.22 : 0) * g;
+    const useL = A || (W && !D), useR = D || (Sk && !A);
+    const dyOf = sg => W && Sk ? (sg < 0 ? 8 : -6) : W ? 8 : Sk ? -6 : 2;
+    for (const [s, sg] of RIG_SIDES) {
+      ski[s].pitch = pitch; ski[s].yaw += sg * -cross;
+      if (pitch < 0) { p['ank' + s][1] -= 4 * g; p['ank' + s][2] += 1.6 * g; }
+    }
+    if (pitch < 0) { p.neck[1] -= 2.6 * g; p.head[1] -= 3.4 * g; p.pelvis[1] += 1 * g; }
+    if (useL) onSki.L = dyOf(-1);
+    if (useR) onSki.R = dyOf(1);
+    const tl = useL ? (onSki.L > 0 ? 0.36 : -0.42) : 0, tr = useR ? (onSki.R > 0 ? -0.36 : 0.42) : 0;
+    twist += (tl + tr) * g;
+  }
+  // upper body turns about the vertical through the pelvis
+  const ct = Math.cos(twist), st = Math.sin(twist), pv = p.pelvis;
+  const rz = v => { const x = v[0] - pv[0], y = v[1] - pv[1]; return [pv[0] + x * ct + y * st, pv[1] - x * st + y * ct, v[2]]; };
+  p.neck = rz(p.neck); p.head = rz(p.head);
+  const sl = Math.hypot(p.neck[0] - pv[0], p.neck[1] - pv[1], p.neck[2] - pv[2]) || 1;
+  const spine = [(p.neck[0] - pv[0]) / sl, (p.neck[1] - pv[1]) / sl, (p.neck[2] - pv[2]) / sl];
+  const side = [ct, -st, 0];
+  const front = [spine[1] * side[2] - spine[2] * side[1], spine[2] * side[0] - spine[0] * side[2], spine[0] * side[1] - spine[1] * side[0]];
+  p.chest = v3lerp(pv, p.neck, 0.7);
+  for (const [s, sg] of RIG_SIDES) {
+    const ank = p['ank' + s], hip = p['hip' + s] = [pv[0] + sg * 3.2, pv[1], pv[2] - 0.6];
+    p['knee' + s] = ik2(hip, ank, RIG_LEN.thigh, RIG_LEN.shin, sg * 0.25, 1, 0.2);
+    const sh = p['sh' + s] = v3add(v3add(p.neck, side, sg * 5.8), spine, -1.7);
+    let h = rz(hand[s]), pd = poleDir[s];
+    pd = [pd[0] * ct + pd[1] * st, -pd[0] * st + pd[1] * ct, pd[2]];
+    if (onSki[s] !== undefined) {
+      // reach for the ski: a point `dy` along it, on its outer edge
+      const k = ski[s], dy = onSki[s], cy = Math.cos(k.yaw), sy = Math.sin(k.yaw), cp = Math.cos(k.pitch), spz = Math.sin(k.pitch);
+      const target = [ank[0] + dy * sy * cp + sg * 1.6 * cy, ank[1] + dy * cy * cp - sg * 1.6 * sy, ank[2] - 0.9 + dy * spz];
+      h = v3lerp(h, target, grabAmt);
+      pd = v3lerp(pd, [sg * 4, -15, 9], grabAmt);
+    }
+    p['elb' + s] = ik2(sh, h, RIG_LEN.upArm, RIG_LEN.foreArm, sg * 0.9, -0.7, -0.6);
+    p['hand' + s] = h;
+    const pl = Math.hypot(pd[0], pd[1], pd[2]) || 1;
+    p['pole' + s] = v3add(h, pd, RIG_LEN.pole / pl);
+  }
+  p.ski = ski; p.spine = spine; p.side = side; p.front = front; p.headYaw = twist + (o.look || 0);
   return p;
 }
-// body point -> [screenX, screenY, depth]; roll = lean around the skis, flip = around the hips' side axis, yaw = heading
 // the rider's silhouette projected onto the snow (sun from upper-left), so flips and spins read on the ground too
 function drawRigShadow(parts, hz) {
   const sp = q => [q[3] + (q[5] + hz) * 0.32, q[4] * 0.8 + hz + (q[5] + hz) * 0.1];
   ctx.save();
   ctx.globalAlpha = 0.22 / (1 + hz / 110);
-  ctx.strokeStyle = ctx.fillStyle = 'rgb(40,66,112)';
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.fillStyle = 'rgb(40,66,112)';
+  // one path, filled once, so overlapping limbs don't darken the shadow
+  ctx.beginPath();
+  const limb = (pa, pb, ra, rb) => { const a = sp(pa), b = sp(pb); capPath(a[0], a[1], ra, b[0], b[1], rb, true); };
   for (const q of parts) {
-    if (q.k === 0) { const a = sp(q.a), b = sp(q.b); ctx.lineWidth = q.w; line(a[0], a[1], b[0], b[1]); }
-    else if (q.k === 1) { const a = sp(q.a); ell(a[0], a[1], q.r, q.r * 0.8); ctx.fill(); }
-    else if (q.k === 2) { const [a, b] = q.pts.map(sp); ctx.lineWidth = 3.4; line(a[0], a[1], b[0], b[1]); }
+    if (q.k === 0) limb(q.a, q.b, q.ra, q.rb);
+    else if (q.k === 1) { if (q.r > 2) limb(q.a, q.a, q.r, q.r); }
+    else if (q.k === 2) limb(q.tail, q.tip, 1.7, 1.7);
+    else if (q.k === 4 && q.o) limb(q.a, q.b, q.w / 2, q.w / 2);
   }
+  ctx.fill();
   ctx.restore();
 }
+// body point -> [screenX, screenY, depth, worldX, worldY, height]
+// roll = lean around the skis, flip = around the hips' side axis, yaw = heading
 function rigXf(yaw, flip, roll, pivot) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cf = Math.cos(flip), sf = Math.sin(flip), cr = Math.cos(roll), sr = Math.sin(roll);
   return p => {
@@ -3051,68 +3162,150 @@ function rigXf(yaw, flip, roll, pivot) {
     return [wx, wy * 0.8 - z2, wy + z2 * 1.25, wx, wy, z2];
   };
 }
+// a limb: two circles of different size joined along their sides
+function capPath(ax, ay, ra, bx, by, rb, append) {
+  const th = Math.atan2(by - ay, bx - ax), h = Math.PI / 2;
+  if (append) ctx.moveTo(ax + ra * Math.cos(th + h), ay + ra * Math.sin(th + h)); else ctx.beginPath();
+  ctx.arc(ax, ay, ra, th + h, th - h);
+  ctx.arc(bx, by, rb, th - h, th + h);
+  ctx.closePath();
+}
+const RIG_OUT = 'rgba(10,16,30,0.82)', RIG_IN = 'rgba(10,16,30,0.3)';
 function drawRig(o) {
-  const S = o.suit || SUIT;
-  const p = rigPose(o.tuck, o.grab);
+  const S = o.suit || SUIT, t = o.t === undefined ? time : o.t;
+  const p = rigPose(o);
   const X = rigXf(o.yaw, o.flip, o.roll, o.pivot);
   const T = {};
-  for (const k in p) T[k] = X(p[k]);
+  for (const k of RIG_JOINTS) T[k] = X(p[k]);
   const parts = [];
-  const seg = (a, b, w, col) => parts.push({ k: 0, a, b, w, col, d: (a[2] + b[2]) / 2 });
-  const dot = (a, r, col, d = a[2]) => parts.push({ k: 1, a, r, col, d });
-  if (o.skis !== false) {
-    for (const [s, ank] of [[-1, p.ankL], [1, p.ankR]]) {
-      const pa = o.plow ? -s * 0.34 : 0, c = Math.cos(pa), sn = Math.sin(pa);
-      const at = (dy, z) => X([ank[0] + dy * sn, ank[1] + dy * c, z]);
-      const tail = at(-14, 0.3), tip = at(16, 0.3), curl = at(19.5, 2.8);
-      parts.push({ k: 2, pts: [tail, tip, curl], d: (tail[2] + tip[2]) / 2 - 2 });
+  const cap = (a, b, ra, rb, col) => parts.push({ k: 0, a, b, ra, rb, col, d: (a[2] + b[2]) / 2 });
+  const ball = (a, r, col, d) => parts.push({ k: 1, a, r, col, d: d === undefined ? a[2] : d });
+  const bar = (a, b, w, col, outline) => parts.push({ k: 4, a, b, w, col, o: outline, d: (a[2] + b[2]) / 2 });
+  const { spine, side, front } = p, pv = p.pelvis;
+  // a point on the torso: f of the way up the spine, `fw` out of the chest (negative = out of the back), `sd` to the rider's right
+  const torso = (f, fw, sd) => X([
+    pv[0] + (p.neck[0] - pv[0]) * f + front[0] * fw + side[0] * sd,
+    pv[1] + (p.neck[1] - pv[1]) * f + front[1] * fw + side[1] * sd,
+    pv[2] + (p.neck[2] - pv[2]) * f + front[2] * fw + side[2] * sd]);
+
+  // ---- skis, bindings and boots
+  for (const [s] of RIG_SIDES) {
+    const ank = p['ank' + s], k = p.ski[s];
+    const cy = Math.cos(k.yaw), sy = Math.sin(k.yaw), cp = Math.cos(k.pitch), sp = Math.sin(k.pitch);
+    const at = (dy, dx, dz) => X([ank[0] + dy * sy * cp + dx * cy, ank[1] + dy * cy * cp - dx * sy, ank[2] - 1.9 + dy * sp + dz]);
+    if (o.skis !== false) {
+      const prof = [[-15.4, 0.8, 0.5], [-14.4, 1.6, 0.3], [-5, 1.5, 0], [6, 1.6, 0], [14, 2, 0.2], [17.6, 1.5, 1.2], [20, 0.5, 2.9]];
+      const pts = prof.map(v => at(v[0], -v[1], v[2])).concat(prof.map(v => at(v[0], v[1], v[2])).reverse());
+      const tail = at(-14.6, 0, 0.3), tip = at(18, 0, 1.4), c0 = at(0, 0, 0), c1 = at(0, 0, 1);
+      // seen from above we get the top sheet; mid-flip the base shows instead
+      const top = (c1[4] - c0[4]) + (c1[5] - c0[5]) * 0.8 > 0;
+      parts.push({ k: 2, pts, tail, tip, m0: at(-11, 0, 0.2), m1: at(12, 0, 0.2), top, d: (tail[2] + tip[2]) / 2 - 2 });
+      bar(at(-4.2, 0, 0.8), at(-2.2, 0, 0.8), 2.8, '#1b1f29');
+      bar(at(4.4, 0, 0.8), at(5.8, 0, 0.8), 2.6, '#1b1f29');
+    }
+    cap(T['ank' + s], at(3.9, 0, 1.3), 2.8, 2.4, S.boot);
+    cap(T['hip' + s], T['knee' + s], 3.1, 2.7, S.pants);
+    cap(T['knee' + s], T['ank' + s], 2.6, 2.9, S.pants);
+  }
+  // ---- torso: jacket, backpack on the back, stripe / zip / pack straps on the chest
+  cap(T.pelvis, T.chest, 4.7, 5.3, S.jacket);
+  cap(T.shL, T.shR, 3.1, 3.1, S.jacket);
+  cap(torso(0.2, -4.7, 0), torso(0.8, -5, 0), 3.2, 3.5, S.pack);
+  bar(torso(0.52, -7.7, -2.2), torso(0.52, -7.7, 2.2), 1.4, S.accent);
+  bar(torso(0.56, 5, -4.3), torso(0.56, 5, 4.3), 2.5, S.accent);
+  bar(torso(0.12, 4.7, 0), torso(0.9, 4.4, 0), 0.9, S.trim);
+  for (const sd of [-3.4, 3.4]) bar(torso(0.97, 3.6, sd), torso(0.4, 5, sd * 1.1), 1.3, S.pack);
+  if (S.stripes) for (const f of [0.22, 0.4, 0.74]) bar(torso(f, 5, -4.2), torso(f + 0.09, 5, 4.2), 1.5, S.accent);
+  // ---- arms, gloves, poles
+  for (const [s] of RIG_SIDES) {
+    const hd = T['hand' + s], tip = T['pole' + s];
+    bar(hd, tip, 1.3, S.pole, true);
+    const bk = v3lerp(hd, tip, 0.9); ball(bk, 1.5, '#39404e');
+    cap(T['sh' + s], T['elb' + s], 2.7, 2.4, S.jacket);
+    cap(T['elb' + s], hd, 2.3, 2, S.sleeve);
+    ball(hd, 2.3, S.glove, hd[2] + 0.5);
+  }
+  // ---- head: helmet with a crest stripe, goggles on a strap, face and a gaiter at the neck
+  const hd = p.head, chy = Math.cos(p.headYaw), shy = Math.sin(p.headYaw);
+  const hf = (x, y, z) => X([hd[0] + x * chy + y * shy, hd[1] - x * shy + y * chy, hd[2] + z]);
+  ball(X([p.neck[0], p.neck[1], p.neck[2] + 0.4]), 2.8, S.accent);
+  parts.push({ k: 1, a: T.head, r: 5.4, col: S.helmet, d: T.head[2], shine: true });
+  const face = hf(0, 3, -2.6);
+  ball(face, 2.7, S.skin, face[2] + 1.5);
+  let prev = null;
+  for (let a = 40; a <= 160; a += 30) {
+    const r = a * Math.PI / 180, cur = hf(0, Math.cos(r) * 4.2, Math.sin(r) * 4.2);
+    if (prev) bar(prev, cur, 1.5, S.visor);
+    prev = cur;
+  }
+  for (const sg of [-1, 1]) {
+    prev = null;
+    for (let a = 52; a <= 180; a += 32) {
+      const r = a * Math.PI / 180, cur = hf(sg * Math.sin(r) * 5.1, Math.cos(r) * 5.1, 0.3);
+      if (prev) bar(prev, cur, 1.8, '#14181f');
+      prev = cur;
     }
   }
-  seg(T.handL, T.poleL, 1.6, S.pole); seg(T.handR, T.poleR, 1.6, S.pole);
-  for (const s of ['L', 'R']) {
-    const ank = p['ank' + s], boot = X([ank[0], ank[1] + 3.5, 1.2]);
-    seg(T['ank' + s], boot, 5.2, S.boot);
-    seg(T['ank' + s], T['knee' + s], 4.8, S.pants);
-    seg(T['knee' + s], T['hip' + s], 5.6, S.pants);
+  const gg = hf(0, 4.6, 0.3), gr = hf(1, 4.6, 0.3), gu = hf(0, 4.6, 1.3);
+  parts.push({ k: 3, a: gg, ang: Math.atan2(gr[1] - gg[1], gr[0] - gg[0]), sc: Math.hypot(gr[0] - gg[0], gr[1] - gg[1]), su: Math.hypot(gu[0] - gg[0], gu[1] - gg[1]), d: gg[2] + 2 });
+  // ---- scarf streaming in the wind (world space, so it trails the direction of travel through spins and flips)
+  const wind = o.wind || [0, 0], wl = Math.hypot(wind[0], wind[1]), wm = Math.min(1, wl);
+  const ux = wl > 0.01 ? wind[0] / wl : 0, uy = wl > 0.01 ? wind[1] / wl : -1;
+  const sa = X(v3add(v3add(p.neck, front, -2.6), side, -2.4));
+  prev = sa;
+  for (let i = 1; i <= 8; i++) {
+    const f = i / 8, len = i * 1.9 * (0.4 + 0.6 * wm), wv = Math.sin(t * 13 - i * 0.7) * (0.2 + 1.5 * f) * (0.3 + wm);
+    const x = sa[3] + ux * len - uy * wv - 0.3 * len * (1 - Math.abs(ux)) * wm;
+    const y = sa[4] + uy * len + ux * wv;
+    const z = sa[5] - (1 - wm) * (f * 8 + 1) - f * 3.5 * wm + Math.cos(t * 11 - i * 0.6) * 0.8 * f * wm;
+    const cur = [x, y * 0.8 - z, y + z * 1.25, x, y, z];
+    bar(prev, cur, 2.5 - f * 1.3, S.accent, true);
+    prev = cur;
   }
-  seg(T.hipL, T.hipR, 6.5, S.pants);
-  seg(T.pelvis, T.neck, 11, S.jacket);
-  const mid = [0, lerp(p.pelvis[1], p.neck[1], 0.62) + 5, lerp(p.pelvis[2], p.neck[2], 0.62)];
-  seg(X([-4.6, mid[1], mid[2]]), X([4.6, mid[1], mid[2]]), 2.6, S.accent);
-  for (const s of ['L', 'R']) {
-    seg(T['sh' + s], T['elb' + s], 4.4, S.jacket);
-    seg(T['elb' + s], T['hand' + s], 3.8, S.sleeve);
-    dot(T['hand' + s], 2.3, S.glove);
-  }
-  const hd = p.head;
-  dot(T.head, 5.7, S.helmet);
-  dot(X([hd[0], hd[1] + 3.2, hd[2] - 2.8]), 2.6, S.skin);
-  const gg = X([hd[0], hd[1] + 4.4, hd[2] + 0.3]), gr = X([hd[0] + 1, hd[1] + 4.4, hd[2] + 0.3]);
-  parts.push({ k: 3, a: gg, ang: Math.atan2(gr[1] - gg[1], gr[0] - gg[0]), sc: Math.hypot(gr[0] - gg[0], gr[1] - gg[1]), d: gg[2] });
+
   if (o.shadowZ !== undefined) drawRigShadow(parts, o.shadowZ);
   parts.sort((a, b) => a.d - b.d);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // pass 1: one bold contour around the whole figure
+  ctx.fillStyle = ctx.strokeStyle = RIG_OUT;
+  for (const q of parts) {
+    if (q.k === 0) { capPath(q.a[0], q.a[1], q.ra + 1.1, q.b[0], q.b[1], q.rb + 1.1); ctx.fill(); }
+    else if (q.k === 1) { ell(q.a[0], q.a[1], q.r + 1.1, q.r + 1.1); ctx.fill(); }
+    else if (q.k === 2) { ctx.lineWidth = 2.2; ctx.beginPath(); for (const v of q.pts) ctx.lineTo(v[0], v[1]); ctx.closePath(); ctx.stroke(); }
+    else if (q.k === 4 && q.o) { ctx.lineWidth = q.w + 2; line(q.a[0], q.a[1], q.b[0], q.b[1]); }
+  }
+  // pass 2: shaded fills, back to front (light from the upper left)
   for (const q of parts) {
     if (q.k === 0) {
-      ctx.strokeStyle = 'rgba(12,18,32,0.55)'; ctx.lineWidth = q.w + 1.6; line(q.a[0], q.a[1], q.b[0], q.b[1]);
-      ctx.strokeStyle = q.col; ctx.lineWidth = q.w; line(q.a[0], q.a[1], q.b[0], q.b[1]);
+      const tn = rigTone(q.col), ax = q.a[0], ay = q.a[1], bx = q.b[0], by = q.b[1], ra = q.ra, rb = q.rb;
+      ctx.fillStyle = RIG_IN; capPath(ax, ay, ra + 0.55, bx, by, rb + 0.55); ctx.fill();
+      ctx.fillStyle = tn.lo; capPath(ax, ay, ra, bx, by, rb); ctx.fill();
+      ctx.fillStyle = q.col; capPath(ax - ra * 0.2, ay - ra * 0.26, ra * 0.8, bx - rb * 0.2, by - rb * 0.26, rb * 0.8); ctx.fill();
+      ctx.strokeStyle = tn.hi; ctx.lineWidth = Math.min(ra, rb) * 0.45;
+      line(ax - ra * 0.36, ay - ra * 0.44, bx - rb * 0.36, by - rb * 0.44);
     } else if (q.k === 1) {
-      ctx.fillStyle = 'rgba(12,18,32,0.55)'; ell(q.a[0], q.a[1], q.r + 0.8, q.r + 0.8); ctx.fill();
-      ctx.fillStyle = q.col; ell(q.a[0], q.a[1], q.r, q.r); ctx.fill();
-      if (q.col === S.helmet) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ell(q.a[0] - q.r * 0.35, q.a[1] - q.r * 0.4, q.r * 0.35, q.r * 0.25); ctx.fill(); }
+      const tn = rigTone(q.col), x = q.a[0], y = q.a[1], r = q.r;
+      ctx.fillStyle = RIG_IN; ell(x, y, r + 0.55, r + 0.55); ctx.fill();
+      ctx.fillStyle = tn.lo; ell(x, y, r, r); ctx.fill();
+      ctx.fillStyle = q.col; ell(x - r * 0.14, y - r * 0.18, r * 0.84, r * 0.84); ctx.fill();
+      ctx.fillStyle = tn.hi; ell(x - r * 0.34, y - r * 0.4, r * 0.4, r * 0.3); ctx.fill();
+      if (q.shine) { ctx.fillStyle = 'rgba(255,255,255,0.75)'; ell(x - r * 0.4, y - r * 0.48, r * 0.2, r * 0.13); ctx.fill(); }
     } else if (q.k === 2) {
-      const [a, b, c] = q.pts;
-      for (const [col, w] of [[S.skiEdge, 4.4], [S.ski, 2.5]]) {
-        ctx.strokeStyle = col; ctx.lineWidth = w;
-        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
-      }
-    } else {
-      const w = Math.max(1.2, 4 * q.sc);
+      ctx.beginPath(); for (const v of q.pts) ctx.lineTo(v[0], v[1]); ctx.closePath();
+      ctx.fillStyle = q.top ? S.ski : S.skiBase; ctx.fill();
+      ctx.strokeStyle = S.skiEdge; ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.strokeStyle = q.top ? rigTone(S.ski).hi : 'rgba(255,255,255,0.4)'; ctx.lineWidth = q.top ? 1.1 : 0.7;
+      line(q.m0[0], q.m0[1], q.m1[0], q.m1[1]);
+    } else if (q.k === 3) {
+      const w = Math.max(1.3, 4.4 * q.sc), h = Math.max(1, 2.3 * q.su);
       ctx.save(); ctx.translate(q.a[0], q.a[1]); ctx.rotate(q.ang);
-      ctx.fillStyle = '#14181f'; ell(0, 0, w + 0.8, 2.6); ctx.fill();
-      ctx.fillStyle = S.lens; ell(0, -0.2, w, 1.8); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ell(-w * 0.35, -0.8, w * 0.3, 0.6); ctx.fill();
+      ctx.fillStyle = '#14181f'; ell(0, 0, w + 0.9, h + 0.8); ctx.fill();
+      ctx.fillStyle = S.lens; ell(0, 0, w, h); ctx.fill();
+      ctx.fillStyle = 'rgba(10,16,30,0.28)'; ell(w * 0.15, h * 0.35, w * 0.8, h * 0.6); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ell(-w * 0.4, -h * 0.4, w * 0.32, h * 0.3); ctx.fill();
       ctx.restore();
+    } else {
+      ctx.strokeStyle = q.col; ctx.lineWidth = q.w; line(q.a[0], q.a[1], q.b[0], q.b[1]);
     }
   }
 }
@@ -3151,7 +3344,8 @@ function drawSkier() {
       ctx.strokeStyle = SUIT.skiEdge; ctx.lineWidth = 4.4; line(x1, y1, x2, y2);
       ctx.strokeStyle = SUIT.ski; ctx.lineWidth = 2.5; line(x1, y1, x2, y2);
     }
-    drawRig({ yaw: P.ang, flip: 0.35 * k, roll: s * 1.45 * k, pivot: 3, tuck: 0.55, grab: null, skis: false, shadowZ: zDisp });
+    drawRig({ yaw: P.ang, flip: 0.35 * k, roll: s * 1.45 * k, pivot: 3, tuck: 0.3, sprawl: k, grab: null, skis: false, shadowZ: zDisp,
+      flail: clamp(P.crashT - 0.5, 0, 0.5), look: s * 0.5 * k, wind: [0, -0.15] });
     ctx.fillStyle = 'rgba(255,255,255,0.95)'; ell(0, 2, 14, 4); ctx.fill();
     ctx.fillStyle = '#ffd43b';
     for (let i = 0; i < 3; i++) {
@@ -3162,13 +3356,20 @@ function drawSkier() {
     }
   } else {
     const G = P.grind;
-    const gi = P.air ? grabInfo(P.grabMask) : null;
     const wob = P.wobble > 0 ? Math.sin(time * 28) * 0.3 * P.wobble : 0;
+    const edge = P.air || G ? 0 : clamp(P.turn, -1.2, 1.2) * 0.3 * (1 - P.airAmt);
+    const sp01 = clamp(P.speed / 520, 0, 1);
     drawRig({
       yaw: P.ang + P.spin + (G && G.slide ? Math.PI / 2 : 0),
       flip: P.flip,
-      roll: (P.air ? 0 : G ? clamp(G.bal, -1, 1) * 0.45 : clamp(P.turn, -1.2, 1.2) * 0.3) + wob,
-      pivot: 14, tuck: P.tuckAmt, grab: gi ? gi[2] : null, plow: P.brake && !P.air && !G, shadowZ: zDisp,
+      roll: (P.air ? 0 : G ? clamp(G.bal, -1, 1) * 0.45 : edge) + wob,
+      pivot: 14, tuck: P.air ? 0 : P.tuckAmt, air: P.airAmt, plowAmt: P.plowAmt, shadowZ: zDisp,
+      grab: P.grabPose, grabMask: P.grabPoseMask, grabAmt: P.grabAmt,
+      edge, squash: P.squash, lean: sp01,
+      // shoulders stay facing down the hill while the skis turn under them; the head looks into the turn
+      twist: P.air || G ? 0 : -P.ang * 0.3 * (1 - P.airAmt), look: P.air ? clamp(P.turn, -1, 1) * 0.5 : clamp(P.turn, -1, 1) * 0.3,
+      spread: G ? 0.85 : 0, flail: Math.max(P.wobble * 1.2, P.stuck > 0 ? 0.8 : 0),
+      wind: [-Math.sin(P.mAng) * sp01, -Math.cos(P.mAng) * sp01],
     });
     // sinking into deep powder / trapped in a tree well
     if ((MAP.id === 'glade' && !P.air && !G) || P.stuck > 0) {
@@ -4006,7 +4207,9 @@ function drawRiderPreview(c, suit) {
     const s = c.width / 50;
     g.setTransform(s, 0, 0, s, c.width / 2, c.height * 0.8);
     g.fillStyle = 'rgba(55,85,135,0.25)'; ell(0, 1, 17, 5); g.fill();
-    drawRig({ yaw: time * 0.9, flip: 0, roll: Math.sin(time * 1.3) * 0.12, pivot: 14, tuck: 0.2 + 0.2 * Math.sin(time * 1.7), grab: null, plow: false, suit, shadowZ: 0 });
+    const e = Math.sin(time * 1.3) * 0.14;
+    drawRig({ yaw: time * 0.9, flip: 0, roll: e, edge: e, pivot: 14, tuck: 0.15 + 0.15 * Math.sin(time * 1.7), grab: null, plow: false, suit, shadowZ: 0,
+      look: Math.sin(time * 0.7) * 0.3, wind: [-0.55, -0.2] });
   });
 }
 function drawMountainPreview(c, eq) {
