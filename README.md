@@ -19,7 +19,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 - **Avalanche** — outrun the slide; crashes cost time
 - **Free Ride** — no avalanche, crash and keep going
 - **One Life** — one crash ends the run
-- **Race** — a countdown, then head to head to a finish line 1,000 m down the hill. The race difficulty picks your rival: **Easy** is Jimmy, **Normal** is Bum, **Hard** is your twin (named You, wearing your outfit) and **Impossible** is Luca the pro. Beat Luca for his Pro Kit outfit
+- **Race** — a countdown, then head to head to a finish line 1,000 m down the hill. The race difficulty picks your rival: **Easy** is Jimmy, **Normal** is Bum, **Hard** is your twin (named You, wearing your outfit, racing at the pace Luca used to) and **Impossible** is Luca the pro. Beat Luca for his Pro Kit outfit
 - **Easy / Normal / Pro** — Easy saves near-miss landings; Pro is strict but pays ×1.3. Avalanche and One Life on Normal or Pro pay **2×** for tricks off jumps and rails.
 
 ## Controls

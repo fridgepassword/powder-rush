@@ -388,7 +388,7 @@
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
       <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL — the bigger the kicker, the more airtime. Rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. In the <b style="display:inline;letter-spacing:0">Superpipe</b>, carve up a wall to launch, trick, and land back on the same wall.</div>
-      <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear) and Impossible is Luca, the pro who bombs past now and then sending impossible tricks.</div>
+      <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear, at the pace Luca used to race) and Impossible is Luca, the pro who bombs past now and then sending impossible tricks.</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
       <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: beat Luca on Impossible, or nail 10 pipe airs in a run.</div>
     </div>
@@ -553,7 +553,7 @@ let bests = {};
 try { bests = JSON.parse(localStorage.getItem('powderRush.bests') || '{}') || {}; } catch (e) { bests = {}; }
 try { const old = parseInt(localStorage.getItem('powderRush.best') || '0', 10); if (old && !bests['pine.avalanche']) bests['pine.avalanche'] = old; } catch (e) {}
 let mapIdx = 0, modeIdx = 0, diffIdx = 1, raceLvl = 1;
-const RACE_DIFF = [0, 1, 2, 2];   // the landing difficulty each race level plays at: Jimmy easy, Bum normal, You and Luca pro
+const RACE_DIFF = [0, 1, 1, 2];   // the landing difficulty each race level plays at: Jimmy easy, Bum and your twin normal (like Luca's old race), Luca pro
 try {
   const s = JSON.parse(localStorage.getItem('powderRush.sel') || 'null');
   if (s) { mapIdx = clamp(s.map | 0, 0, MAPS.length - 1); modeIdx = clamp(s.mode | 0, 0, MODES.length - 1); if (s.diff !== undefined) diffIdx = clamp(s.diff | 0, 0, DIFFS.length - 1); if (s.race !== undefined) raceLvl = clamp(s.race | 0, 0, 3); }
@@ -2511,8 +2511,8 @@ const RACERS = [
     flips: [1, 1, 2], spins: [0, 1, 2], flat: 0.35, desc: 'Lives in his van by the lift. Quicker than he looks.',
     lines: ['"Duuude, nice line!"', '"Powder day, brah!"', '"See ya at the van!"'],
     suit: () => makeSuit('retro', 'black', 'guy', '#8a4b24') },
-  { id: 'you', name: 'You', level: 'Hard', speed: 640, reward: 150, col: '#ff8f8f',
-    flips: [1, 2, 3], spins: [0, 2, 3], flat: 0.75, desc: 'Your exact twin in your gear. Never crashes, never tires.',
+  { id: 'you', name: 'You', level: 'Hard', speed: 600, reward: 150, col: '#ff8f8f',   // the pace Luca raced at before the rivals came along
+    flips: [1, 2, 3], spins: [0, 2, 3], flat: 0.75, desc: 'Your twin in your gear, racing at the pace Luca used to.',
     lines: ['"Hey, nice outfit."', '"Catch me if you can. Me."', '"Wait, which one of us is real?"'],
     suit: () => makeSuit(SAVE.suit, SAVE.ski, SAVE.rider, HAIRS[0]) },
   { id: 'luca', name: 'Luca', level: 'Impossible', speed: 730, reward: 300, col: '#ffd43b',
@@ -2587,7 +2587,7 @@ function lucaRaceSpeed(n) {
   if (n.y > RACE_Y + 120) return 0;
   const R = n.racer, lead = n.y - P.y;
   if (R.id === 'luca') return R.speed - (lead > 1400 ? 40 : 0);   // impossible means impossible
-  return R.speed + (lead > 700 ? -60 : lead < -300 ? 50 : 0);
+  return R.speed + (lead > 700 ? -55 : lead < -250 ? 55 : 0);   // eases off when well ahead, pushes when you pull away (as Luca's old race did)
 }
 function lucaLanded(n, A) {
   puff(n.x, n.y, 14);
