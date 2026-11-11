@@ -19,7 +19,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 - **Avalanche** — outrun the slide; crashes cost time
 - **Free Ride** — no avalanche, crash and keep going
 - **One Life** — one crash ends the run
-- **Race Luca** — a countdown, then head to head with Luca the pro to a finish line 1,000 m down the hill. Beat him for bonus snowflakes and his Pro Kit outfit
+- **Race** — a countdown, then head to head to a finish line 1,000 m down the hill. The race difficulty picks your rival: **Easy** is Jimmy, **Normal** is Bum, **Hard** is your twin (named You, wearing your outfit) and **Impossible** is Luca the pro. Beat Luca for his Pro Kit outfit
 - **Easy / Normal / Pro** — Easy saves near-miss landings; Pro is strict but pays ×1.3. Avalanche and One Life on Normal or Pro pay **2×** for tricks off jumps and rails.
 
 ## Controls
@@ -40,7 +40,7 @@ Touch: hold the left or right half of the screen to steer (spin in the air) and 
 The **home menu** has every mountain, mode and difficulty on one screen. Or **visit the Lodge**: hang out at the base lodge, ride the Summit Express chairlift to the top (a 3-second ride), then pick your run from the trail signs at the summit.
 
 ## Extras
-Pick a **boy or girl rider** on the menu (every outfit fits both). Watch out for **Luca**, a pro who bombs past you now and then and sends impossible tricks — five back flips off the smallest kicker — then try to overtake him. Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis (some animated, like Rainbow Glide and Lava Flow), tree styles, snow colours, trails, weather, **buddies** who follow you down the hill (a camera drone, snowy owl, penguin, husky pup or mini yeti) and **trick FX** that go off when you land (fireworks, lightning, gold coins, hearts). Try a **Mystery Gift** for a random item, and earn the special gear you can't buy: beat Luca in a race, or land 10 halfpipe airs in one run.
+Pick a **boy or girl rider** on the menu (every outfit fits both). Watch out for **Luca**, a pro who bombs past you now and then and sends impossible tricks — five back flips off the smallest kicker — then try to overtake him. Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis (some animated, like Rainbow Glide and Lava Flow), tree styles, snow colours, trails, weather, **buddies** who follow you down the hill (a camera drone, snowy owl, penguin, husky pup or mini yeti) and **trick FX** that go off when you land (fireworks, lightning, gold coins, hearts). Try a **Mystery Gift** for a random item, and earn the special gear you can't buy: beat Luca on Impossible, or land 10 halfpipe airs in one run.
 
 ## Look
 Every map has its own hand-painted snow, snow-laden trees and ice spires casting soft shadows, sculpted kickers with marked landings, and drifting cloud shadows. The menu shows each mountain with the game's own art.

@@ -96,7 +96,11 @@
   .diff.sel .ic { color: var(--ink); }
   .mode .nm, .diff .nm { font-size: 15px; }
   .mode .ds, .diff .ds { font-size: 11.5px; }
-  .diff .bars { display: flex; gap: 3px; align-items: flex-end; height: 20px; }
+  .diffs.race4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 940px) { .diffs.race4 { grid-template-columns: repeat(2, 1fr); } }
+  .ic.rival { font-size: 19px; font-weight: 900; font-style: italic; color: var(--ink); background: var(--dc); }
+  .diff.sel .ic.rival { background: var(--dc); color: var(--ink); box-shadow: 0 0 0 3px var(--gold); }
+    .diff .bars { display: flex; gap: 3px; align-items: flex-end; height: 20px; }
   .diff .bars i { width: 5px; border-radius: 2px; background: currentColor; opacity: .3; }
   .diff .bars i.on { opacity: 1; }
   @media (max-width: 760px) { .diff .ds { display: none; } .diff { padding: 8px 10px; } .diff .ic { width: 34px; height: 34px; } }
@@ -295,7 +299,7 @@
         <div id="mapRow" class="row"><div id="maps" class="cards"></div></div>
         <h2><span class="num">2</span>Mode</h2>
         <div id="modeRow" class="row"><div id="modes" class="modes"></div></div>
-        <h2><span class="num">3</span>Difficulty</h2>
+        <h2><span class="num">3</span><span id="diffTitle">Difficulty</span></h2>
         <div id="diffRow" class="row"><div id="diffs" class="diffs"></div></div>
         <div class="go-row">
           <button id="go" class="go" type="button">DROP IN <svg viewBox="0 0 24 24"><path d="M8 4.5v15a1 1 0 0 0 1.5.9l11-7.5a1 1 0 0 0 0-1.7l-11-7.5A1 1 0 0 0 8 4.5z"/></svg></button>
@@ -343,7 +347,7 @@
     <div class="summit-panel">
       <div id="summitInfo" class="summit-info"></div>
       <div class="summit-row"><span>Mode</span><div id="summitModes" class="pills"></div></div>
-      <div class="summit-row"><span>Difficulty</span><div id="summitDiffs" class="pills"></div></div>
+      <div class="summit-row"><span id="summitDiffLbl">Difficulty</span><div id="summitDiffs" class="pills"></div></div>
       <div class="summit-go"><button id="summitGo" class="go" type="button">DROP IN <svg viewBox="0 0 24 24"><path d="M8 4.5v15a1 1 0 0 0 1.5.9l11-7.5a1 1 0 0 0 0-1.7l-11-7.5A1 1 0 0 0 8 4.5z"/></svg></button><button id="summitBack" class="btn small" type="button">↓ Ride back down</button></div>
       <div class="foot keysonly"><kbd>←</kbd><kbd>→</kbd> run · <kbd>↑</kbd><kbd>↓</kbd> mode · <kbd>Enter</kbd> drop in · <kbd>Esc</kbd> back down</div>
     </div>
@@ -384,9 +388,9 @@
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
       <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL — the bigger the kicker, the more airtime. Rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. In the <b style="display:inline;letter-spacing:0">Superpipe</b>, carve up a wall to launch, trick, and land back on the same wall.</div>
-      <div><b>Luca</b>A pro skier who bombs past now and then, hunting every jump and rail for impossible tricks. Overtake him for a big bonus, or take him on in <b style="display:inline;letter-spacing:0">Race Luca</b> mode: first to 1,000 m wins.</div>
+      <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear) and Impossible is Luca, the pro who bombs past now and then sending impossible tricks.</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
-      <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: beat Luca, or nail 10 pipe airs in a run.</div>
+      <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: beat Luca on Impossible, or nail 10 pipe airs in a run.</div>
     </div>
     <div class="btns"><button id="howClose" class="btn primary" type="button">Got it <kbd class="keysonly">Esc</kbd></button></div>
   </div>
@@ -501,7 +505,7 @@ const MODES = [
   { id: 'avalanche', name: 'Avalanche', desc: 'Outrun the slide. Crashes cost time. Tricks score 2× on Normal & Pro.' },
   { id: 'freeride', name: 'Free Ride', desc: 'No avalanche. Crash, get back up, keep shredding.' },
   { id: 'onelife', name: 'One Life', desc: 'One crash and the run is over. Tricks score 2× on Normal & Pro.' },
-  { id: 'race', name: 'Race Luca', desc: 'Head to head with the pro, first to 1,000 m wins. Beat him for snowflakes!' },
+  { id: 'race', name: 'Race', desc: 'Head to head to a finish line 1,000 m down. Pick your rival, from Jimmy to Luca.' },
 ];
 // trail-style map ratings: green circle, blue square, black diamond, double black diamond
 // trail ratings, plus the orange sign resorts put on terrain parks
@@ -548,16 +552,19 @@ const grabInfo = m => m ? (GRABS[m] || ['Rocket Air', 380, 'both']) : null;
 let bests = {};
 try { bests = JSON.parse(localStorage.getItem('powderRush.bests') || '{}') || {}; } catch (e) { bests = {}; }
 try { const old = parseInt(localStorage.getItem('powderRush.best') || '0', 10); if (old && !bests['pine.avalanche']) bests['pine.avalanche'] = old; } catch (e) {}
-let mapIdx = 0, modeIdx = 0, diffIdx = 1;
+let mapIdx = 0, modeIdx = 0, diffIdx = 1, raceLvl = 1;
+const RACE_DIFF = [0, 1, 2, 2];   // the landing difficulty each race level plays at: Jimmy easy, Bum normal, You and Luca pro
 try {
   const s = JSON.parse(localStorage.getItem('powderRush.sel') || 'null');
-  if (s) { mapIdx = clamp(s.map | 0, 0, MAPS.length - 1); modeIdx = clamp(s.mode | 0, 0, MODES.length - 1); if (s.diff !== undefined) diffIdx = clamp(s.diff | 0, 0, DIFFS.length - 1); }
+  if (s) { mapIdx = clamp(s.map | 0, 0, MAPS.length - 1); modeIdx = clamp(s.mode | 0, 0, MODES.length - 1); if (s.diff !== undefined) diffIdx = clamp(s.diff | 0, 0, DIFFS.length - 1); if (s.race !== undefined) raceLvl = clamp(s.race | 0, 0, 3); }
 } catch (e) {}
-let MAP = MAPS[mapIdx], MODE = MODES[modeIdx], DIFF = DIFFS[diffIdx];
-const bestKey = () => DIFF.id === 'normal' ? `${MAP.id}.${MODE.id}` : `${MAP.id}.${MODE.id}.${DIFF.id}`;
+let MAP = MAPS[mapIdx], MODE = MODES[modeIdx], DIFF = DIFFS[MODE.id === 'race' ? RACE_DIFF[raceLvl] : diffIdx];
+// best scores are kept per mountain, mode and difficulty (races: per rival)
+const keyFor = mapId => MODE.id === 'race' ? `${mapId}.race.${RACERS[raceLvl].id}` : DIFF.id === 'normal' ? `${mapId}.${MODE.id}` : `${mapId}.${MODE.id}.${DIFF.id}`;
+const bestKey = () => keyFor(MAP.id);
 const getBest = () => bests[bestKey()] || 0;
 function saveBests() { try { localStorage.setItem('powderRush.bests', JSON.stringify(bests)); } catch (e) {} }
-function saveSel() { try { localStorage.setItem('powderRush.sel', JSON.stringify({ map: mapIdx, mode: modeIdx, diff: diffIdx })); } catch (e) {} }
+function saveSel() { try { localStorage.setItem('powderRush.sel', JSON.stringify({ map: mapIdx, mode: modeIdx, diff: diffIdx, race: raceLvl })); } catch (e) {} }
 
 // ---------- gear (bought with snowflakes)
 const SUITS = [
@@ -574,7 +581,7 @@ const SUITS = [
   { id: 'retro', name: 'Retro 80s', price: 900, jacket: '#16c2d5', sleeve: '#ff4fa3', accent: '#ffe14d', pants: '#5b2fc0', helmet: '#ff4fa3', lens: '#ffe14d' },
   { id: 'galaxy', name: 'Galaxy', price: 1200, jacket: '#2a1b5e', sleeve: '#1f1548', accent: '#7fe3ff', pants: '#120c2e', helmet: '#c86bff', lens: '#7fe3ff' },
   { id: 'chroma', name: 'Chroma Shift', price: 2200, anim: 'chroma', jacket: '#ff3f6f', sleeve: '#e02b5c', accent: '#ffffff', pants: '#1b1f29', helmet: '#ffffff', lens: '#1b1f29' },
-  { id: 'luca', name: "Luca's Pro Kit", price: 0, req: 'lucaWin', reqText: 'Beat Luca in a race', jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f' },
+  { id: 'luca', name: "Luca's Pro Kit", price: 0, req: 'lucaWin', reqText: 'Beat Luca in a race (Impossible)', jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f' },
 ];
 const SKIS = [
   { id: 'red', name: 'Race Red', price: 0, col: '#ef3b3f' },
@@ -678,7 +685,8 @@ const MISSION_POOL = [
   { id: 'smash3', text: 'Smash 3 snowmen', stat: 'snowmen', n: 3, reward: 60 },
   { id: 'overtake3', text: 'Overtake 3 rival skiers', stat: 'overtakes', n: 3, reward: 80 },
   { id: 'luca', text: 'Overtake Luca the pro', stat: 'lucaPasses', n: 1, reward: 150 },
-  { id: 'raceLuca', text: 'Beat Luca in a race', stat: 'raceWins', n: 1, reward: 200 },
+  { id: 'raceWin', text: 'Win a race against any rival', stat: 'raceWins', n: 1, reward: 120 },
+  { id: 'raceLuca', text: 'Beat Luca in a race (Impossible)', stat: 'lucaWins', n: 1, reward: 400 },
   { id: 'pipe5', text: 'Land 5 airs in the halfpipe', stat: 'pipeAirs', n: 5, reward: 110 },
   { id: 'close5', text: 'Get 5 close calls in one run', stat: 'closeCalls', n: 5, reward: 70 },
   { id: 'gap2', text: 'Clear 2 gap jumps', stat: 'gaps', n: 2, reward: 90 },
@@ -1285,6 +1293,7 @@ function onPress(k) {
       const dir = (k === 'ArrowLeft' || k === 'KeyA') ? -1 : 1;
       if (menuRow === 0) selectMap((mapIdx + dir + MAPS.length) % MAPS.length);
       else if (menuRow === 1) selectMode((modeIdx + dir + MODES.length) % MODES.length);
+      else if (MODE.id === 'race') selectRace((raceLvl + dir + RACERS.length) % RACERS.length);
       else selectDiff((diffIdx + dir + DIFFS.length) % DIFFS.length);
     }
     refreshMenu();
@@ -1401,8 +1410,8 @@ function reset() {
   letters = 0; comboT = 0; npcs = []; npcTimer = rand(4, 7); lucaTimer = rand(18, 30); airTrail = []; flashA = 0; confetti = [];
   iceballs = []; bombs = []; iceTimer = rand(3, 5); bombTimer = rand(2, 4); splashA = 0; splashBlobs = []; judgeNext = 900;
   runMissions = SAVE.missions.map(id => ({ m: MISSION_POOL.find(x => x.id === id), done: false })).filter(r => r.m);
-  race = MODE.id === 'race' ? { cd: 3.4, beep: 4, t0: 0, lucaFin: null, youFin: null, lucaEst: null } : null;
-  if (race) npcs.push(newLuca(70, 6, 0));   // side by side in the start gate
+  race = MODE.id === 'race' ? { cd: 3.4, beep: 4, t0: 0, lucaFin: null, youFin: null, lucaEst: null, racer: RACERS[raceLvl] } : null;
+  if (race) npcs.push(newLuca(70, 6, 0, race.racer));   // side by side in the start gate
   resetBuddy();
   pipes = []; pipeNext = 900;
   runCoins = 0; settled = false;
@@ -1417,7 +1426,7 @@ function reset() {
   particles = []; popups = []; tracks = []; curStroke = null;
   shake = 0; zoneIdx = 0; banner = null; overT = 0; hintT = 8; tip = null; newBest = false;
   stats = { gates: 0, flakes: 0, crashes: 0, tricks: 0, grinds: 0, hoops: 0, words: 0, saves: 0, bestTrick: '—', bestTrickPts: 0, maxSpeed: 0,
-    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, raceWins: 0, pipeAirs: 0, closeCalls: 0, gaps: 0, threads: 0, maxTurns: 0, logRides: 0, wells: 0 };
+    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, raceWins: 0, lucaWins: 0, pipeAirs: 0, closeCalls: 0, gaps: 0, threads: 0, maxTurns: 0, logRides: 0, wells: 0 };
   camX = 0; camY = 0; anchor = 0.28; viewS = targetScale();
   ensureGen();
 }
@@ -2452,8 +2461,8 @@ function updateRivals(dt) {
     if (n.pro) {
       updateLuca(n, dt);
       const rel = Math.sign(P.y - n.y) || n.rel;
-      if (n.rel > 0 && rel < 0 && !n.passed && Math.abs(P.x - n.x) < 420) { n.passed = true; n.trickCD = Math.min(n.trickCD, rand(0.7, 1.3)); popup(`Luca: ${pick(LUCA_LINES)}`, '#ffd43b', false, n.x, n.y - n.z - 40); }
-      if (n.rel < 0 && rel > 0 && Math.abs(P.x - n.x) < 220 && P.crashT <= 0) { stats.lucaPasses++; addPoints(300, 'You passed Luca!', '#ffd43b', true); bumpCombo(2); }
+      if (n.rel > 0 && rel < 0 && !n.passed && Math.abs(P.x - n.x) < 420) { n.passed = true; n.trickCD = Math.min(n.trickCD, rand(0.7, 1.3)); popup(`${n.name}: ${pick(n.racer.lines)}`, n.racer.col, false, n.x, n.y - n.z - 40); }
+      if (n.rel < 0 && rel > 0 && Math.abs(P.x - n.x) < 220 && P.crashT <= 0) { if (n.racer.id === 'luca') stats.lucaPasses++; addPoints(n.racer.id === 'luca' ? 300 : 120, `You passed ${n.racer.id === 'you' ? 'your twin' : n.name}!`, n.racer.col, true); bumpCombo(2); }
       n.rel = rel;
       continue;
     }
@@ -2489,8 +2498,31 @@ function lucaSuit() {
     jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', glove: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f',
     pack: '#2a3242', trim: '#ffd43b', visor: '#a88614' });
 }
-function newLuca(x, y, speed) {
-  return { pro: true, name: 'Luca', x, y, z: 0, gz: 0, ang: 0, speed, ph: rand(0, TAU), turn: 0, suit: lucaSuit(), crashT: 0,
+// race rivals, easiest to hardest: each has a race pace, a bag of tricks, a colour for their name tag and
+// something to say as they go past. The race difficulty you pick decides who you race.
+const RACERS = [
+  { id: 'jimmy', name: 'Jimmy', level: 'Easy', speed: 475, reward: 50, col: '#7dffb0',
+    flips: [0, 0, 1], spins: [0, 1, 1, 2], flat: 0, desc: 'First season on skis. Cheerful, not fast.',
+    lines: ['"Wait for meeee!"', '"Is this the right way?"', '"Whoa. Whoa. WHOA!"'],
+    suit: () => Object.assign(makeSuit('classic', 'red', 'guy', '#c2452d'), {
+      jacket: '#ff8a1f', sleeve: '#e0700f', accent: '#ffffff', glove: '#ffffff', pants: '#3a5ba8', helmet: '#ffffff', lens: '#6fd0ff',
+      trim: '#a8520a', visor: '#a8acb2', pack: '#4a6bb8' }) },
+  { id: 'bum', name: 'Bum', level: 'Normal', speed: 565, reward: 100, col: '#7fd3ff',
+    flips: [1, 1, 2], spins: [0, 1, 2], flat: 0.35, desc: 'Lives in his van by the lift. Quicker than he looks.',
+    lines: ['"Duuude, nice line!"', '"Powder day, brah!"', '"See ya at the van!"'],
+    suit: () => makeSuit('retro', 'black', 'guy', '#8a4b24') },
+  { id: 'you', name: 'You', level: 'Hard', speed: 640, reward: 150, col: '#ff8f8f',
+    flips: [1, 2, 3], spins: [0, 2, 3], flat: 0.75, desc: 'Your exact twin in your gear. Never crashes, never tires.',
+    lines: ['"Hey, nice outfit."', '"Catch me if you can. Me."', '"Wait, which one of us is real?"'],
+    suit: () => makeSuit(SAVE.suit, SAVE.ski, SAVE.rider, HAIRS[0]) },
+  { id: 'luca', name: 'Luca', level: 'Impossible', speed: 730, reward: 300, col: '#ffd43b',
+    flips: null, spins: null, flat: 1, desc: 'The pro. Five back flips off the smallest kicker. Good luck.',
+    lines: LUCA_LINES, suit: lucaSuit },
+];
+// what to call a rival on screen ("YOU" would be confusing next to you)
+const racerTag = R => R.id === 'you' ? 'TWIN' : R.name.toUpperCase();
+function newLuca(x, y, speed, R = RACERS[3]) {
+  return { pro: true, racer: R, name: R.name, x, y, z: 0, gz: 0, ang: 0, speed, ph: rand(0, TAU), turn: 0, suit: R.suit(), crashT: 0,
     rel: Math.sign(P.y - y) || 1, air: null, grind: null, flip: 0, spin: 0, grabAmt: 0, passed: false, trickCD: rand(1.5, 2.5) };
 }
 function spawnLuca() {
@@ -2536,6 +2568,14 @@ function lucaLaunch(n, A) {
   puff(n.x, n.y, 8);
 }
 function lucaJump(n, o) {
+  const R = n.racer;
+  if (R.id !== 'luca') {
+    // the other racers throw whatever their skills allow
+    const flips = pick(R.flips), spins = pick(R.spins), grab = pick(['side', 'nose', 'tail', null]);
+    const name = [LUCA_FLIPS[flips], ['', '360', '720', '1080'][spins], grab ? LUCA_GRABS[grab] : ''].filter(Boolean).join(' ') || 'Big Air';
+    lucaLaunch(n, { H: 80 + 45 * o.mul + flips * 14, T: 1 + 0.28 * o.mul + flips * 0.12, flips, spins, grab, z0: o.lipH, name });
+    return;
+  }
   const small = o.mul <= 1.12 || o.pillow;
   const flips = small ? 5 : o.mul >= 2.2 ? randi(6, 7) : randi(4, 6);
   const spins = pick([0, 0, 1, 2, 2, 3, 4]), grab = pick(['side', 'nose', 'tail', 'both', null]);
@@ -2545,15 +2585,16 @@ function lucaJump(n, o) {
 // race pace: set by difficulty, nudged so the race stays close; he coasts to a stop after the line
 function lucaRaceSpeed(n) {
   if (n.y > RACE_Y + 120) return 0;
-  const base = { easy: 545, normal: 600, pro: 660 }[DIFF.id], lead = n.y - P.y;
-  return base + (lead > 700 ? -55 : lead < -250 ? 55 : 0);
+  const R = n.racer, lead = n.y - P.y;
+  if (R.id === 'luca') return R.speed - (lead > 1400 ? 40 : 0);   // impossible means impossible
+  return R.speed + (lead > 700 ? -60 : lead < -300 ? 50 : 0);
 }
 function lucaLanded(n, A) {
   puff(n.x, n.y, 14);
   const v = viewRect();
   if (n.x > v.left - 40 && n.x < v.right + 40 && n.y > v.top - 40 && n.y < v.bottom + 40) {
-    popup(`LUCA: ${A.name}!`, '#ffd43b', false, n.x, n.y - 30);
-    ring(n.x, n.y, '#ffd43b', 90);
+    popup(`${racerTag(n.racer)}: ${A.name}!`, n.racer.col, false, n.x, n.y - 30);
+    ring(n.x, n.y, n.racer.col, 90);
     tone(660, 0.12, 'triangle', 0.06); tone(990, 0.18, 'triangle', 0.05, 0, 0.08);
   }
 }
@@ -2583,9 +2624,10 @@ function updateLuca(n, dt) {
   // he just pops something absurd off flat ground every few seconds
   n.trickCD -= dt;
   const tgt = lucaTarget(n);
+  if (n.trickCD <= 0 && !chance(n.racer.flat)) n.trickCD = rand(2.6, 4.2);   // not everyone does tricks off flat ground
   if (n.trickCD <= 0 && (!tgt || tgt[1] - n.y > 520)) {
     n.trickCD = rand(2.6, 4.2);
-    const flips = randi(2, 4), spins = pick([0, 1, 2]), grab = pick([null, 'side', 'nose']);
+    const flips = n.racer.id === 'luca' ? randi(2, 4) : n.racer.id === 'you' ? randi(1, 2) : 1, spins = pick([0, 1, 2]), grab = pick([null, 'side', 'nose']);
     lucaLaunch(n, { H: 105 + flips * 16, T: 1.1 + flips * 0.13, flips, spins, grab, z0: 0, name: [LUCA_FLIPS[flips], ['', '360', '720'][spins], grab ? LUCA_GRABS[grab] : '', 'off flat ground'].filter(Boolean).join(' ') });
     return;
   }
@@ -2630,7 +2672,7 @@ function settleRun() {
   if (settled) return null;
   settled = true;
   const done = runMissions.filter(r => r.done);
-  const res = { flakes: stats.flakes, scoreBonus: Math.floor(score / 250), missions: done.reduce((a, r) => a + r.m.reward, 0), done, race: race && race.win ? 150 : 0 };
+  const res = { flakes: stats.flakes, scoreBonus: Math.floor(score / 250), missions: done.reduce((a, r) => a + r.m.reward, 0), done, race: race && race.win ? race.racer.reward : 0 };
   res.total = res.flakes + res.scoreBonus + res.missions + res.race;
   SAVE.coins += res.total; SAVE.runs++;
   SAVE.missions = SAVE.missions.filter(id => !done.some(r => r.m.id === id));
@@ -3064,14 +3106,15 @@ function updatePlay(dt) {
     const L = npcs.find(n => n.pro);
     if (L && race.lucaFin === null && L.y >= RACE_Y) {
       race.lucaFin = time - race.t0;
-      popup(P.y < RACE_Y ? `Luca crossed the line in ${fmtTime(race.lucaFin)} — finish strong!` : `Luca finished in ${fmtTime(race.lucaFin)}`, '#ffd43b', true);
+      const who = race.racer.id === 'you' ? 'Your twin' : race.racer.name;
+      popup(P.y < RACE_Y ? `${who} crossed the line in ${fmtTime(race.lucaFin)}, finish strong!` : `${who} finished in ${fmtTime(race.lucaFin)}`, race.racer.col, true);
       tone(392, 0.25, 'triangle', 0.06);
     }
     if (P.y >= RACE_Y) {
       race.youFin = time - race.t0;
       if (race.lucaFin === null && L) race.lucaEst = race.youFin + (RACE_Y - L.y) / Math.max(250, L.speed);
       race.win = race.lucaFin === null || race.youFin < race.lucaFin;
-      if (race.win) stats.raceWins = 1;
+      if (race.win) { stats.raceWins = 1; if (race.racer.id === 'luca') stats.lucaWins = 1; }
       checkMissions();
       gameOver('race');
     }
@@ -4336,6 +4379,7 @@ function drawCritter(o) {
   }
 }
 function drawLuca(n) {
+  if (n.racer.id === 'you') animSuit(n.suit, SAVE.suit, SAVE.ski);   // your twin wears your gear, animated bits and all
   const z = n.z + n.gz, sk = 1 + z / 260, air = !!n.air, G = n.grind, e = clamp(n.turn, -1, 1) * 0.3;
   ctx.fillStyle = `rgba(55,85,135,${0.18 / (1 + z / 60)})`; ell(n.x + z * 0.12, n.y + 1, 14 * sk, 5 * sk); ctx.fill();
   ctx.save(); ctx.translate(n.x, n.y - z);
@@ -4347,15 +4391,15 @@ function drawLuca(n) {
   // a gold name tag, and a live count of the flips while he is up there
   const ty = n.y - z - 50 * zs;
   ctx.font = `900 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-  const tw = ctx.measureText('★ LUCA').width + 14;
+  const tag = '★ ' + racerTag(n.racer), tcol = n.racer.col, tw = ctx.measureText(tag).width + 14;
   ctx.fillStyle = 'rgba(14,22,40,0.85)'; rr(n.x - tw / 2, ty - 8, tw, 16, 8); ctx.fill();
-  ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 1.2; rr(n.x - tw / 2, ty - 8, tw, 16, 8); ctx.stroke();
-  ctx.fillStyle = '#ffd43b'; ctx.fillText('★ LUCA', n.x, ty + 0.5);
+  ctx.strokeStyle = tcol; ctx.lineWidth = 1.2; rr(n.x - tw / 2, ty - 8, tw, 16, 8); ctx.stroke();
+  ctx.fillStyle = tcol; ctx.fillText(tag, n.x, ty + 0.5);
   if (air && n.air.flips) {
     const done = Math.min(n.air.flips, Math.floor(Math.abs(n.flip) / TAU + 0.15));
     if (done > 0) {
       ctx.font = `italic 900 ${16 + done * 2}px ${FONT}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(14,22,40,0.9)';
-      ctx.strokeText(`FLIP ×${done}`, n.x + 44, ty - 14); ctx.fillStyle = '#ffd43b'; ctx.fillText(`FLIP ×${done}`, n.x + 44, ty - 14);
+      ctx.strokeText(`FLIP ×${done}`, n.x + 44, ty - 14); ctx.fillStyle = tcol; ctx.fillText(`FLIP ×${done}`, n.x + 44, ty - 14);
     }
   }
 }
@@ -5582,13 +5626,13 @@ function drawHUD() {
     ctx.fillStyle = 'rgba(255,255,255,0.16)'; rr(bx2, by2, bw2, 5, 2.5); ctx.fill();
     for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? '#1b2230' : '#ffffff'; ctx.fillRect(bx2 + bw2 + 6 + i * 4, by2 - 3 + j * 4, 4, 4); }
     const you = clamp(P.y / RACE_Y, 0, 1), lu = L ? clamp(L.y / RACE_Y, 0, 1) : 0;
-    ctx.fillStyle = '#ffd43b'; ell(bx2 + bw2 * lu, by2 + 2.5, 5, 5); ctx.fill();
+    ctx.fillStyle = race.racer.col; ell(bx2 + bw2 * lu, by2 + 2.5, 5, 5); ctx.fill();
     ctx.fillStyle = '#ffffff'; ell(bx2 + bw2 * you, by2 + 2.5, 5, 5); ctx.fill();
     ctx.strokeStyle = SUIT.jacket; ctx.lineWidth = 2; ell(bx2 + bw2 * you, by2 + 2.5, 5, 5); ctx.stroke();
     hudText(`RACE  ${fmtTime(el)}`, bx2, my + 16, 10, 'rgba(255,255,255,0.92)', 900);
     if (L && race.cd <= 0) {
       const ahead = P.y >= L.y, gap = Math.abs(L.y - P.y) / Math.max(250, ahead ? L.speed : P.speed);
-      hudText(ahead ? `YOU +${gap.toFixed(1)} s` : `LUCA +${gap.toFixed(1)} s`, bx2 + bw2 + 22, my + 16, 10, ahead ? '#7dffb0' : '#ffd43b', 900, 'right');
+      hudText(ahead ? `YOU +${gap.toFixed(1)} s` : `${racerTag(race.racer)} +${gap.toFixed(1)} s`, bx2 + bw2 + 22, my + 16, 10, ahead ? '#7dffb0' : '#ffd43b', 900, 'right');
     }
   } else if (isAva()) {
     const gapM = Math.max(0, (P.y - avaY) / PX_PER_M);
@@ -5681,7 +5725,7 @@ function drawHUD() {
     ctx.font = `italic 900 ${Math.round(Math.min(120, W * 0.2))}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     ctx.lineWidth = 12; ctx.strokeStyle = 'rgba(8,20,46,0.9)'; ctx.strokeText(txt, 0, 0);
     ctx.fillStyle = go ? '#5ad08a' : '#ffd43b'; ctx.fillText(txt, 0, 0);
-    if (!go) { ctx.font = `800 ${Math.round(Math.min(20, W * 0.04))}px ${FONT}`; ctx.lineWidth = 5; ctx.strokeText('RACE LUCA TO THE FINISH', 0, 78); ctx.fillStyle = '#ffffff'; ctx.fillText('RACE LUCA TO THE FINISH', 0, 78); }
+    if (!go) { ctx.font = `800 ${Math.round(Math.min(20, W * 0.04))}px ${FONT}`; ctx.lineWidth = 5; ctx.strokeText((race.racer.id === 'you' ? 'RACE YOURSELF TO THE FINISH' : `RACE ${race.racer.name.toUpperCase()} TO THE FINISH`), 0, 78); ctx.fillStyle = '#ffffff'; ctx.fillText((race.racer.id === 'you' ? 'RACE YOURSELF TO THE FINISH' : `RACE ${race.racer.name.toUpperCase()} TO THE FINISH`), 0, 78); }
     ctx.restore();
   }
   if (isTouch && state === 'play') {
@@ -5811,14 +5855,7 @@ function buildMenu() {
     b.addEventListener('click', () => { initAudio(); selectMode(i); menuRow = 1; refreshMenu(); });
     noFocus(b); modes.appendChild(b);
   });
-  const diffs = $('diffs');
-  DIFFS.forEach((m, i) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'diff'; b.style.setProperty('--dc', DIFF_COLS[i]);
-    const bars = [8, 13, 18].map((h, k) => `<i style="height:${h}px" class="${k <= i ? 'on' : ''}"></i>`).join('');
-    b.innerHTML = `<span class="ic"><span class="bars">${bars}</span></span><span class="txt"><span class="nm">${m.name}</span><span class="ds">${m.desc}</span></span>`;
-    b.addEventListener('click', () => { initAudio(); selectDiff(i); menuRow = 2; refreshMenu(); });
-    noFocus(b); diffs.appendChild(b);
-  });
+  buildDiffRow();
   const bind =(id, fn) => { const b = $(id); noFocus(b); b.addEventListener('click', () => { initAudio(); fn(); }); };
   bind('go', () => { home = 'menu'; startGame(); });
   bind('lodgeBtn', () => openLodge('base'));
@@ -6605,7 +6642,7 @@ function refreshLodge() {
   const box = $('runSigns'); box.innerHTML = '';
   MAPS.forEach((m, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'sign' + (i === lodge.sel ? ' sel' : '') + (i % 2 ? ' right' : '');
-    const best = bests[DIFF.id === 'normal' ? `${m.id}.${MODE.id}` : `${m.id}.${MODE.id}.${DIFF.id}`] || 0;
+    const best = bests[keyFor(m.id)] || 0;
     b.innerHTML = `<span class="sic">${rateIcon(m.rate, 14)}</span><span class="snm">${m.name}</span><span class="sbest">${best ? 'Best ' + fmt(best) : RATINGS[m.rate]}</span>`;
     b.addEventListener('click', () => { lodge.sel = i; selectMap(i); refreshLodge(); sfx.gate(); });
     b.addEventListener('mouseenter', () => { lodge.hover = i; });
@@ -6615,7 +6652,13 @@ function refreshLodge() {
   const modes = $('summitModes'); modes.innerHTML = '';
   MODES.forEach((m, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (i === modeIdx ? ' on' : ''); b.innerHTML = `${MODE_ICONS[m.id]}${m.name}`; b.addEventListener('click', () => { selectMode(i); refreshLodge(); }); noFocus(b); modes.appendChild(b); });
   const diffs = $('summitDiffs'); diffs.innerHTML = '';
-  DIFFS.forEach((d, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (i === diffIdx ? ' on' : ''); b.textContent = d.name; b.addEventListener('click', () => { selectDiff(i); refreshLodge(); }); noFocus(b); diffs.appendChild(b); });
+  const racing = MODE.id === 'race';
+  $('summitDiffLbl').textContent = racing ? 'Race vs' : 'Difficulty';
+  (racing ? RACERS : DIFFS).forEach((d, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (i === (racing ? raceLvl : diffIdx) ? ' on' : '');
+    b.textContent = racing ? `${d.level}: ${d.id === 'you' ? 'Twin' : d.name}` : d.name;
+    b.addEventListener('click', () => { if (racing) selectRace(i); else selectDiff(i); refreshLodge(); }); noFocus(b); diffs.appendChild(b);
+  });
   const m = MAPS[lodge.sel];
   $('summitInfo').innerHTML = `<b>${m.name}</b> · ${m.desc}`;
 }
@@ -6800,22 +6843,47 @@ function refreshMenu() {
   [...$('maps').children].forEach((c, i) => c.classList.toggle('sel', i === mapIdx));
   [...$('modes').children].forEach((c, i) => c.classList.toggle('sel', i === modeIdx));
   $('mapRow').classList.toggle('focus', menuRow === 0);
-  [...$('diffs').children].forEach((c, i) => c.classList.toggle('sel', i === diffIdx));
+  [...$('diffs').children].forEach((c, i) => c.classList.toggle('sel', i === (MODE.id === 'race' ? raceLvl : diffIdx)));
   $('modeRow').classList.toggle('focus', menuRow === 1);
   $('diffRow').classList.toggle('focus', menuRow === 2);
-  const b = getBest(), tag = `${mapTag(MAP)} · ${MODE.name} · ${DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}`;
+  const R = RACERS[raceLvl], racing = MODE.id === 'race', rb = racing && SAVE.raceBest[`${MAP.id}.${R.id}`];
+  const b = getBest(), tag = `${mapTag(MAP)} · ${MODE.name} · ${racing ? `${R.level} vs ${R.id === 'you' ? 'your twin' : R.name}` : DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}${rb ? ` · best time ${fmtTime(rb)}` : ''}`;
   $('bestLbl').innerHTML = b ? `<b>${fmt(b)}</b><br>your best on ${tag}` : `${tag}<br>no best score yet — go set one!`;
   [...$('maps').children].forEach((c, i) => {
-    const m = MAPS[i], k = DIFF.id === 'normal' ? `${m.id}.${MODE.id}` : `${m.id}.${MODE.id}.${DIFF.id}`, mb = bests[k] || 0;
+    const m = MAPS[i], mb = bests[keyFor(m.id)] || 0;
     c.querySelector('.cbest').innerHTML = mb ? `Best <b>${fmt(mb)}</b>` : '';
   });
 }
-function selectDiff(i) { diffIdx = i; DIFF = DIFFS[i]; saveSel(); refreshMenu(); }
+// the difficulty row: Easy / Normal / Pro, or in Race mode who you race (Jimmy, Bum, your twin or Luca)
+function buildDiffRow() {
+  const diffs = $('diffs'), racing = MODE.id === 'race';
+  diffs.innerHTML = '';
+  diffs.classList.toggle('race4', racing);
+  $('diffTitle').textContent = racing ? 'Race difficulty' : 'Difficulty';
+  (racing ? RACERS : DIFFS).forEach((m, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'diff';
+    if (racing) {
+      b.style.setProperty('--dc', m.col);
+      b.innerHTML = `<span class="ic rival">${m.name[0]}</span><span class="txt"><span class="nm">${m.level} · ${m.id === 'you' ? 'You (twin)' : m.name}</span><span class="ds">${m.desc}</span></span>`;
+      b.addEventListener('click', () => { initAudio(); selectRace(i); menuRow = 2; refreshMenu(); });
+    } else {
+      b.style.setProperty('--dc', DIFF_COLS[i]);
+      const bars = [8, 13, 18].map((h, k) => `<i style="height:${h}px" class="${k <= i ? 'on' : ''}"></i>`).join('');
+      b.innerHTML = `<span class="ic"><span class="bars">${bars}</span></span><span class="txt"><span class="nm">${m.name}</span><span class="ds">${m.desc}</span></span>`;
+      b.addEventListener('click', () => { initAudio(); selectDiff(i); menuRow = 2; refreshMenu(); });
+    }
+    noFocus(b); diffs.appendChild(b);
+  });
+}
+// race difficulty also sets how forgiving landings are (Jimmy easy, Bum normal, You and Luca pro)
+function applyDiff() { DIFF = DIFFS[MODE.id === 'race' ? RACE_DIFF[raceLvl] : diffIdx]; }
+function selectRace(i) { raceLvl = i; applyDiff(); saveSel(); refreshMenu(); }
+function selectDiff(i) { diffIdx = i; applyDiff(); saveSel(); refreshMenu(); }
 function selectMap(i) {
   if (i === mapIdx && MAP === MAPS[i]) return;
   mapIdx = i; MAP = MAPS[i]; saveSel(); reset(); refreshMenu();
 }
-function selectMode(i) { modeIdx = i; MODE = MODES[i]; saveSel(); refreshMenu(); }
+function selectMode(i) { const was = MODE.id === 'race'; modeIdx = i; MODE = MODES[i]; applyDiff(); if (was !== (MODE.id === 'race')) buildDiffRow(); saveSel(); refreshMenu(); }
 function setRider(r) { SAVE.rider = r; persist(); applyCosmetics(); refreshMenu(); }
 function showMenu() {
   if (home === 'lodge') { openLodge('base'); reset(); return; }
@@ -6828,7 +6896,7 @@ function startGame() {
   closeSubs();
   reset();
   setState('play');
-  const sub = MODE.id === 'avalanche' ? 'Outrun the avalanche!' : MODE.id === 'onelife' ? "One crash and it's over" : MODE.id === 'race' ? `Race Luca to the finish — ${fmt(RACE_M)} m` : 'No avalanche — just ride';
+  const sub = MODE.id === 'avalanche' ? 'Outrun the avalanche!' : MODE.id === 'onelife' ? "One crash and it's over" : MODE.id === 'race' ? `Race ${race.racer.id === 'you' ? 'yourself' : race.racer.name} to the finish, ${fmt(RACE_M)} m` : 'No avalanche — just ride';
   banner = { text: MAP.zones[0], sub, col: MAP.zcols[0], t: 3, max: 3 };
   sfx.start();
 }
@@ -6853,17 +6921,19 @@ function gameOver(reason) {
   if (reason === 'race') {
     // race result: the times, a new personal best, and the bragging rights
     const r = race, lt = r.lucaFin !== null ? r.lucaFin : r.lucaEst, gap = lt !== null ? Math.abs(lt - r.youFin) : 0;
-    titles.race = r.win ? ['YOU BEAT LUCA!', `${fmtTime(r.youFin)} — ${gap.toFixed(1)} s ahead of the pro`] : ['LUCA WINS', `You ${fmtTime(r.youFin)} · Luca ${fmtTime(r.lucaFin)} — ${gap.toFixed(1)} s back`];
+    const R = r.racer, twin = R.id === 'you', nm = twin ? 'your twin' : R.name;
+    titles.race = r.win ? [twin ? 'YOU BEAT YOURSELF!' : `YOU BEAT ${R.name.toUpperCase()}!`, `${fmtTime(r.youFin)}, ${gap.toFixed(1)} s ahead of ${nm}`]
+      : [twin ? 'YOUR TWIN WINS' : `${R.name.toUpperCase()} WINS`, `You ${fmtTime(r.youFin)} · ${twin ? 'Twin' : R.name} ${fmtTime(r.lucaFin)}, ${gap.toFixed(1)} s back`];
     cls = r.win ? 'end' : 'buried';
-    const pb = SAVE.raceBest[MAP.id];
+    const pbKey = `${MAP.id}.${R.id}`, pb = SAVE.raceBest[pbKey];
     r.newPB = !pb || r.youFin < pb;
-    if (r.newPB) SAVE.raceBest[MAP.id] = Math.round(r.youFin * 10) / 10;
-    r.unlock = r.win && !SAVE.ach.lucaWin;
-    if (r.win) { SAVE.ach.lucaWin = true; sfx.trick(4); launchConfetti(); } else sfx.wipeout();
+    if (r.newPB) SAVE.raceBest[pbKey] = Math.round(r.youFin * 10) / 10;
+    r.unlock = r.win && R.id === 'luca' && !SAVE.ach.lucaWin;
+    if (r.win) { if (R.id === 'luca') SAVE.ach.lucaWin = true; sfx.trick(4); launchConfetti(); } else sfx.wipeout();
     persist();
   }
   $('overTitle').textContent = titles[reason][0]; $('overTitle').className = 'big ' + cls;
-  $('overSub').textContent = `${titles[reason][1]}  ·  ${mapTag(MAP)} · ${MODE.name} · ${DIFF.name}`;
+  $('overSub').textContent = `${titles[reason][1]}  ·  ${mapTag(MAP)} · ${MODE.name} · ${race ? `${race.racer.level} (${race.racer.name})` : DIFF.name}`;
   // the score counts up once the panel appears
   const t0 = performance.now() + overDelay() * 1000, target = score;
   $('overScore').textContent = '0';
@@ -6875,13 +6945,13 @@ function gameOver(reason) {
   if (newBest) launchConfetti();
   const earned = settleRun();
   if (earned) {
-    $('overCoins').innerHTML = `+${fmt(earned.total)} ❄ snowflakes  <small>${earned.flakes} collected · ${earned.scoreBonus} score bonus · ${earned.missions} from missions${earned.race ? ` · ${earned.race} for beating Luca` : ''} · bank: ${fmt(SAVE.coins)}</small>`;
+    $('overCoins').innerHTML = `+${fmt(earned.total)} ❄ snowflakes  <small>${earned.flakes} collected · ${earned.scoreBonus} score bonus · ${earned.missions} from missions${earned.race ? ` · ${earned.race} for beating ${race.racer.id === 'you' ? 'your twin' : race.racer.name}` : ''} · bank: ${fmt(SAVE.coins)}</small>`;
     $('overMissions').innerHTML = earned.done.map(r => `<div>✓ Mission complete: ${r.m.text} (+${r.m.reward})</div>`).join('')
       + (race && race.unlock ? `<div>🏆 Unlocked: Luca's Pro Kit — equip it in the shop!</div>` : '');
   }
   // stat tiles: the best trick gets a full-width tile, everything else sits three to a row
   const rows = [
-    ...(race && race.youFin !== null ? [['Your time', fmtTime(race.youFin) + (race.newPB ? ' ★' : '')], ['Luca', race.lucaFin !== null ? fmtTime(race.lucaFin) : '~' + fmtTime(race.lucaEst || 0)], ['Best time', fmtTime(SAVE.raceBest[MAP.id])]] : []),
+    ...(race && race.youFin !== null ? [['Your time', fmtTime(race.youFin) + (race.newPB ? ' ★' : '')], [race.racer.id === 'you' ? 'Twin' : race.racer.name, race.lucaFin !== null ? fmtTime(race.lucaFin) : '~' + fmtTime(race.lucaEst || 0)], ['Best time', fmtTime(SAVE.raceBest[`${MAP.id}.${race.racer.id}`])]] : []),
     ['Best trick', stats.bestTrick, true],
     ['Distance', `${fmt(maxDist)} m`],
     ['Top speed', `${Math.round(stats.maxSpeed)} km/h`],
