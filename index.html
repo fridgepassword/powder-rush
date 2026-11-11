@@ -75,6 +75,7 @@
   .rate { position: absolute; z-index: 2; top: 7px; left: 7px; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.94); color: #1b2230;
     border-radius: 999px; padding: 2px 9px 2px 6px; font-size: 11px; font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
   .rate svg { display: block; }
+  .rate.park { background: #ff7a1a; color: #fff; }
   .cbest { position: absolute; z-index: 2; left: 9px; bottom: 6px; font-size: 11px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.7); letter-spacing: .3px; }
   .cbest b { color: var(--gold); }
   .txt { display: block; padding: 9px 12px 11px; }
@@ -294,6 +295,7 @@
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
       <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL — the bigger the kicker, the more airtime. Rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind.</div>
+      <div><b>Luca</b>A pro skier who bombs past now and then, hunting every jump and rail for impossible tricks. Overtake him for a big bonus!</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
       <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow colours, trails and weather</div>
     </div>
@@ -393,7 +395,7 @@ const MAPS = [
   { id: 'pine', name: 'Pine Valley', rate: 0, desc: 'Forest run with gates, logs and a snowcat grooming the slope.',
     zones: ['Green Meadow', 'Blue Ridge', 'Black Diamond', 'Double Black', 'The Abyss'],
     zcols: ['#1f9d5c', '#2a72dc', '#1b2230', '#1b2230', '#7b2ff0'] },
-  { id: 'park', name: 'Terrain Park', rate: 0, desc: 'Kickers up to XXL, long rails, jibs and judges scoring your tricks.',
+  { id: 'park', name: 'Terrain Park', rate: 4, desc: 'Kickers up to XXL, long rails, jibs and judges scoring your tricks.',
     zones: ['Warm-up Line', 'Medium Line', 'Pro Line', 'Big Air Line', 'Mega Line'],
     zcols: ['#2b8cff', '#ff8a1f', '#e5333b', '#e5333b', '#7b2ff0'] },
   { id: 'glacier', name: 'Glacier Pass', rate: 1, desc: 'Slick ice, crevasses, and ice balls lobbed across the slope.',
@@ -402,7 +404,7 @@ const MAPS = [
   { id: 'glade', name: 'Deep Glades', rate: 2, desc: 'Deep-powder trees: duck branches, dodge tree wells and snow bombs.',
     zones: ['Aspen Glade', 'Old Growth', 'Tight Trees', 'Tree Well Alley', 'The Thicket'],
     zcols: ['#2f8f4e', '#2a72dc', '#1b2230', '#1b2230', '#7b2ff0'] },
-  { id: 'night', name: 'Midnight Woods', rate: 3, desc: 'Pitch black. Only your headlamp and flares light the way.',
+  { id: 'night', name: 'Midnight Woods', rate: 3, desc: 'The hardest run: pitch-black forest, rocks, black ice and foxes. Headlamp only.',
     zones: ['Lantern Trail', 'Owl Hollow', 'Shadow Pines', 'Moonless Drop', 'The Deep Dark'],
     zcols: ['#ffb84a', '#ffb84a', '#ffd27a', '#ffd27a', '#c9a8ff'] },
 ];
@@ -412,14 +414,17 @@ const MODES = [
   { id: 'onelife', name: 'One Life', desc: 'One crash and the run is over. Tricks score 2× on Normal & Pro.' },
 ];
 // trail-style map ratings: green circle, blue square, black diamond, double black diamond
-const RATINGS = ['Easy', 'Intermediate', 'Advanced', 'Expert'];
+// trail ratings, plus the orange sign resorts put on terrain parks
+const RATINGS = ['Easy', 'Intermediate', 'Advanced', 'Expert', 'Terrain Park'];
 function rateIcon(r, size = 12) {
   const d = `<path d="M6 0.5 L11.5 6 L6 11.5 L0.5 6Z" fill="#1b2230"/>`;
   const shape = r === 0 ? `<circle cx="6" cy="6" r="5.5" fill="#1f9d5c"/>` : r === 1 ? `<rect x="1" y="1" width="10" height="10" fill="#2a72dc"/>` : d;
   if (r === 3) return `<svg width="${size * 1.8}" height="${size}" viewBox="0 0 22 12">${d}<g transform="translate(10 0)">${d}</g></svg>`;
+  if (r === 4) return `<svg width="${size * 1.6}" height="${size}" viewBox="0 0 19 12"><rect x="0.75" y="0.75" width="17.5" height="10.5" rx="5.25" fill="#ff7a1a" stroke="#fff" stroke-width="1.5"/><path d="M4 8.5h3.2l2-4 2 4H15" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   return `<svg width="${size}" height="${size}" viewBox="0 0 12 12">${shape}</svg>`;
 }
-const rateBadge = r => `<span class="rate">${rateIcon(r)}${RATINGS[r]}</span>`;
+const rateBadge = r => `<span class="rate${r === 4 ? ' park' : ''}">${rateIcon(r)}${r === 4 ? 'Park' : RATINGS[r]}</span>`;
+const mapTag = m => m.rate === 4 ? m.name : `${m.name} (${RATINGS[m.rate]})`;
 
 // tol = max landing error (radians) before you bail; clean = error for a perfect landing (between = sketchy save)
 const DIFFS = [
@@ -544,6 +549,7 @@ const MISSION_POOL = [
   { id: 'speed100', text: 'Hit 100 km/h', stat: 'maxSpeed', n: 100, reward: 50 },
   { id: 'smash3', text: 'Smash 3 snowmen', stat: 'snowmen', n: 3, reward: 60 },
   { id: 'overtake3', text: 'Overtake 3 rival skiers', stat: 'overtakes', n: 3, reward: 80 },
+  { id: 'luca', text: 'Overtake Luca the pro', stat: 'lucaPasses', n: 1, reward: 150 },
   { id: 'close5', text: 'Get 5 close calls in one run', stat: 'closeCalls', n: 5, reward: 70 },
   { id: 'gap2', text: 'Clear 2 gap jumps', stat: 'gaps', n: 2, reward: 90 },
   { id: 'thread3', text: 'Thread the needle 3 times (Deep Glades)', stat: 'threads', n: 3, reward: 90 },
@@ -1234,7 +1240,7 @@ function reset() {
     tuckAmt: 0, airAmt: 0, plowAmt: 0, grabAmt: 0, grabPose: null, grabPoseMask: 0, squash: 0, wobble: 0, gapEnd: 0, crashMax: 1, crashSide: 1, stuck: 0, wellCD: 0, turnDir: 0, turnHold: 0, turnChain: 0, lastTurnT: -9, flare: 0, judgeEnd: 0, onCord: false,
     pw: { magnet: 0, shield: 0, boost: 0, double: 0, ghost: 0 },
   };
-  letters = 0; comboT = 0; npcs = []; npcTimer = rand(4, 7); airTrail = []; flashA = 0; confetti = [];
+  letters = 0; comboT = 0; npcs = []; npcTimer = rand(4, 7); lucaTimer = rand(18, 30); airTrail = []; flashA = 0; confetti = [];
   iceballs = []; bombs = []; iceTimer = rand(3, 5); bombTimer = rand(2, 4); splashA = 0; splashBlobs = []; judgeNext = 900;
   runMissions = SAVE.missions.map(id => ({ m: MISSION_POOL.find(x => x.id === id), done: false })).filter(r => r.m);
   runCoins = 0; settled = false;
@@ -1249,7 +1255,7 @@ function reset() {
   particles = []; popups = []; tracks = []; curStroke = null;
   shake = 0; zoneIdx = 0; banner = null; overT = 0; hintT = 8; tip = null; newBest = false;
   stats = { gates: 0, flakes: 0, crashes: 0, tricks: 0, grinds: 0, hoops: 0, words: 0, saves: 0, bestTrick: '—', bestTrickPts: 0, maxSpeed: 0,
-    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, closeCalls: 0, gaps: 0, threads: 0, ducks: 0, maxTurns: 0, logRides: 0, wells: 0 };
+    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, closeCalls: 0, gaps: 0, threads: 0, ducks: 0, maxTurns: 0, logRides: 0, wells: 0 };
   camX = 0; camY = 0; anchor = 0.28; viewS = targetScale();
   ensureGen();
 }
@@ -1320,6 +1326,7 @@ function addSlalom(G) {
     const gx = clamp(slalom.cx + slalom.side * off, G.L + 120, G.R - 120);
     G.out.push({ t: 'gate', x: gx, y: slalom.y, w: lerp(150, 104, d), col: slalom.side > 0 ? 0 : 1, state: 0, sec: slalom.sec, last: slalom.count === 1 });
     addReserve(gx, slalom.y, 80);
+    for (const s of [-1, 1]) addReserve(gx + s * (lerp(150, 104, d) / 2 + 9), slalom.y, 28);   // the poles and their panels
     if (slalom.prev) addReserve((gx + slalom.prev.x) / 2, (slalom.y + slalom.prev.y) / 2, 70);
     slalom.prev = { x: gx, y: slalom.y };
     slalom.side *= -1;
@@ -1328,26 +1335,43 @@ function addSlalom(G) {
     if (--slalom.count <= 0) { slalom.active = false; slalom.nextStart = slalom.y + rand(400, 1200) * (MAP.id === 'glacier' ? 2 : 1); }
   }
 }
-function addRamp(G, spec, x, y, force, flakes = true) {
-  if (!force && !okSpot(x, y, Math.max(60, spec.w / 2), 20)) return null;
+// the ground a kicker keeps to itself. Park jumps claim their whole lane: in-run, kicker, flight path (with any
+// gap) and landing, so nothing else can be built in it. Natural kickers keep the kicker and the landing clear.
+function rampClaim(spec, x, y, landEnd = Infinity) {
+  const top = y - spec.h / 2, lip = y + spec.h / 2, Tof = v => (0.5 + v * 0.0005) * spec.mul;
+  const dMin = 480 * Tof(480) * 0.9, dMax = 780 * Tof(780) * 1.1 + 40, out = [];
+  if (spec.tag) {
+    const R = (spec.w * 1.25 + 24) / 2 * 1.12, end = Math.min(lip + dMax, landEnd);
+    for (let yy = top - 170; yy < end; yy += R * 0.9) out.push([x, yy, R]);
+    out.push([x, end, R]);
+  } else {
+    out.push([x, top - 70, Math.max(55, spec.w * 0.45)], [x, y, Math.max(70, spec.w * 0.62)], [x, lip, Math.max(66, spec.w * 0.66)]);
+    for (let k = 0; k <= 150; k += 75) out.push([x, lip + k, Math.max(55, spec.w * 0.45)]);
+    for (let k = dMin; k <= Math.min(dMax, landEnd - lip); k += 70) out.push([x, lip + k, Math.max(58, spec.w * 0.45)]);
+  }
+  return out;
+}
+const claimFree = cs => cs.every(([x, y, r]) => okSpot(x, y, r, 10));
+// opt.landEnd: the landing stops here (the next kicker in a line); opt.landFrom: landing lane starts this far past the lip
+function addRamp(G, spec, x, y, force, flakes = true, opt = {}) {
+  const landEnd = opt.landEnd === undefined ? Infinity : opt.landEnd, claim = rampClaim(spec, x, y, landEnd);
+  if (!force && !claimFree(claim)) return null;
   const o = { t: 'ramp', x, y, w: spec.w, h: spec.h, lipH: spec.lipH, mul: spec.mul, col: spec.col, pillow: !!spec.pillow };
   G.out.push(o);
   const top = y - spec.h / 2, lip = y + spec.h / 2;
-  addReserve(x, top - 70, Math.max(55, spec.w * 0.45)); addReserve(x, y, Math.max(70, spec.w * 0.62));
-  for (let k = 0; k <= 150; k += 75) addReserve(x, lip + k, Math.max(55, spec.w * 0.45));
+  for (const [cx, cy, r] of claim) addReserve(cx, cy, r);
   const Tof = v => (0.5 + v * 0.0005) * spec.mul;
   const dMin = 480 * Tof(480) * 0.9, dMax = 780 * Tof(780) * 1.1 + 40;
-  for (let k = dMin; k <= dMax; k += 70) addReserve(x, lip + k, Math.max(58, spec.w * 0.45));
   // park extras along the flight path: a hoop at the apex and/or a P-A-R-K letter bubble
   const sp = 620, T = Tof(sp), vz = (0.5 * GZ * T * T - spec.lipH) / T;
   const arcAt = f => { const t = T * f; return [lip + sp * t, spec.lipH + vz * t - 0.5 * GZ * t * t]; };
   if (spec.tag) {
-    // a park jump: groomed in-run and landing lanes, and a sign with the jump's size
+    // a park jump: groomed in-run and landing lanes, and a sign with the jump's size beside the in-run
     const lw = spec.w * 1.25 + 24, s0 = Math.max(G.y0, top - 190);
     if (top - s0 > 20) G.out.push({ t: 'lane', x, y: s0, len: top - s0, w: lw, col: spec.col });
-    const sweet = lip + sp * T;
-    for (let a = lip + dMin * 0.8, b = lip + dMax; a < b; a += 300) G.out.push({ t: 'lane', x, y: a, len: Math.min(300, b - a), w: lw, col: spec.col, sweet });
-    G.out.push({ t: 'ksign', x: x - lw / 2 - 20, y: Math.max(G.y0, top - 30), tag: spec.tag, col: spec.col });
+    const sweet = lip + sp * T, end = Math.min(lip + dMax, landEnd);
+    for (let a = lip + Math.max(dMin * 0.8, opt.landFrom || 0); a < end; a += 300) G.out.push({ t: 'lane', x, y: a, len: Math.min(300, end - a), w: lw, col: spec.col, sweet: sweet < end ? sweet : undefined });
+    G.out.push({ t: 'ksign', x: x - lw / 2 + 16, y: Math.max(G.y0, top - 30), tag: spec.tag, col: spec.col });
   }
   const hoop = MAP.id === 'park' && chance(0.45);
   const letter = MAP.id === 'park' && G.wantLetter;
@@ -1366,11 +1390,10 @@ function addRamp(G, spec, x, y, force, flakes = true) {
 }
 function addGapJump(G, x, y) {
   const spec = G.d > 0.5 && chance(0.5) ? KICK.l : KICK.m;
-  if (!okSpot(x, y, 60, 20)) return;
-  const lip = y + spec.h / 2;
   const gl = rand(240, 330) * spec.mul / 1.3;
-  const ramp = addRamp(G, spec, x, y, true);
-  const gap = { t: 'gap', x, y: lip + 30 + gl / 2, w: spec.w + 50, h: gl };
+  const ramp = addRamp(G, spec, x, y, false, true, { landFrom: 30 + gl + 24 });
+  if (!ramp) return;
+  const gap = { t: 'gap', x, y: y + spec.h / 2 + 30 + gl / 2, w: spec.w + 50, h: gl };
   ramp.gap = gap;
   G.out.push(gap);
 }
@@ -1394,15 +1417,24 @@ function addFlakeLines(G, p) {
   }
 }
 function addMoguls(G) {
-  const cx = rand(G.L + 120, G.R - 120), cy = rand(G.y0 + 60, G.y1 - 60), n = randi(6, 12);
+  // a field of bumps; the whole field is kept clear of trees, rocks and logs placed later
+  const cx = rand(G.L + 120, G.R - 120), cy = rand(G.y0 + 60, G.y1 - 60), n = randi(6, 12), field = [];
   for (let k = 0; k < n; k++) {
-    const x = cx + rand(-110, 110), y = cy + rand(-70, 70);
-    if (y >= G.y0 && y < G.y1 && okSpot(x, y, 18, 0)) G.out.push({ t: 'mogul', x, y, r: rand(20, 30) });
+    const x = cx + rand(-110, 110), y = cy + rand(-70, 70), r = rand(20, 30);
+    if (y >= G.y0 && y < G.y1 && okSpot(x, y, r, 4)) field.push({ t: 'mogul', x, y, r });
   }
+  for (const m of field) { G.out.push(m); addReserve(m.x, m.y, m.r); }
 }
 function addIce(G, size) {
-  const x = rand(G.L + 150, G.R - 150), y = rand(G.y0 + 60, G.y1 - 60);
-  if (okSpot(x, y, 40, 0)) G.out.push({ t: 'ice', x, y, rx: rand(70, 130) * size, ry: rand(30, 55) * size });
+  for (let t = 0; t < 5; t++) {
+    const x = rand(G.L + 150, G.R - 150), y = rand(G.y0 + 60, G.y1 - 60), rx = rand(70, 130) * size, ry = rand(30, 55) * size;
+    const cs = [[x, y, ry]];   // circles covering the whole ellipse
+    for (const [f, k] of [[0.3, 0.97], [0.55, 0.86], [0.75, 0.68], [0.9, 0.45]]) cs.push([x - rx * f, y, ry * k], [x + rx * f, y, ry * k]);
+    if (!cs.every(([cx, cy, r]) => okSpot(cx, cy, r, 4))) continue;
+    G.out.push({ t: 'ice', x, y, rx, ry });
+    for (const [cx, cy, r] of cs) addReserve(cx, cy, r);
+    return;
+  }
 }
 function addLogs(G, p) {
   const n = chance(p) ? randi(1, 1 + Math.round(G.d * 2)) : 0;
@@ -1492,14 +1524,16 @@ function pickSize(d) {
   return 'l';
 }
 function addKickerLine(G, x, y) {
-  if (!okSpot(x, y, 60, 20)) return;
-  const n = chance(0.5) ? 3 : 2;
-  let yy = y;
-  for (let i = 0; i < n; i++) {
+  // two or three kickers in a row; each landing ends where the next in-run starts
+  const n = chance(0.5) ? 3 : 2, specs = [], ys = [];
+  for (let i = 0, yy = y; i < n; i++) {
     const spec = KICK[pickSize(G.d)];
-    addRamp(G, spec, x, yy, true, i === 0 || chance(0.5));
-    yy += spec.h / 2 + 680 * (0.5 + 680 * 0.0005) * spec.mul + 180;
+    specs.push(spec); ys.push(yy);
+    yy += spec.h / 2 + 680 * (0.5 + 680 * 0.0005) * spec.mul + 180 + 190;
   }
+  const ends = ys.map((_, i) => i + 1 < n ? ys[i + 1] - specs[i + 1].h / 2 - 190 : Infinity);
+  if (!specs.every((s, i) => claimFree(rampClaim(s, x, ys[i], ends[i])))) return;
+  specs.forEach((s, i) => addRamp(G, s, x, ys[i], true, i === 0 || chance(0.5), { landEnd: ends[i] }));
 }
 
 // ---- edges & start area
@@ -1549,25 +1583,30 @@ function addSnowcat(G) {
   const dir = chance(0.5) ? 1 : -1, x0 = -dir * (COURSE_HALF - 40);
   G.out.push({ t: 'cat', x: x0, y, dir, sp: rand(85, 120), x0, x1: x0, seen: false });
 }
+// Pine Valley and Midnight Woods share a layout; the night run is the hardest map in the game: thicker forest,
+// more rocks, logs and black ice, foxes darting across, and fewer lanterns and flares the deeper you go
 function genForest(G, night) {
   const d = G.d;
   addSlalom(G);
   if (!night && chance(0.22 + 0.1 * d)) addSnowcat(G);
   if (chance(lerp(0.25, 0.42, d))) addRandomRamp(G, d > 0.25 && chance(0.4) ? KICK.big : KICK.std);
   addFlakeLines(G, 0.6);
-  if (chance(0.3 + 0.2 * d)) addMoguls(G);
-  if (chance(lerp(0.08, night ? 0.15 : 0.3, d))) addIce(G, 1);
-  addLogs(G, lerp(0.15, 0.5, d));
-  addRocks(G, randi(0, 1 + Math.round(3 * d)));
+  if (chance(night ? 0.4 + 0.3 * d : 0.3 + 0.2 * d)) addMoguls(G);
+  if (chance(night ? lerp(0.18, 0.45, d) : lerp(0.08, 0.3, d))) addIce(G, night ? rand(1, 1.4) : 1);
+  addLogs(G, night ? lerp(0.35, 0.75, d) : lerp(0.15, 0.5, d));
+  addRocks(G, night ? randi(1, 2 + Math.round(4 * d)) : randi(0, 1 + Math.round(3 * d)));
   if (night) {
-    addLanterns(G, randi(1, 2));
+    addLanterns(G, d < 0.4 ? randi(1, 2) : randi(0, 1));
     // flares light up the dark for a few seconds
-    if (chance(0.45)) for (let t = 0; t < 8; t++) {
+    if (chance(lerp(0.45, 0.22, d))) for (let t = 0; t < 8; t++) {
       const x = rand(G.L + 60, G.R - 60), y = rand(G.y0 + 30, G.y1 - 30);
       if (okSpot(x, y, 24, 20)) { G.out.push({ t: 'flare', x, y, got: false }); addReserve(x, y, 24); break; }
     }
     // something is watching from the dark
     for (let n = randi(0, 2); n > 0; n--) G.out.push({ t: 'eyes', x: rand(G.L - 100, G.R + 100), y: rand(G.y0, G.y1), ph: rand(0, TAU), gone: false });
+    addGroves(G, randi(1, 2 + Math.round(d * 2)));
+    addTrees(G, Math.round(lerp(13, 27, d)), 46);
+    return;
   }
   addGroves(G, chance(0.65) ? randi(1, 1 + Math.round(d * 2)) : 0);
   addTrees(G, Math.round(lerp(7, 17, d)), 55);
@@ -1649,9 +1688,11 @@ function genExtras(G) {
       if (place(G, { t: 'snowman', x: rand(G.L, G.R), y: rand(G.y0, G.y1), r: 13, smashed: false, hat: pick(['#e5333b', '#2b6fe8', '#1b1f29', '#2f8f4e', '#7b2ff0']) }, 30)) break;
     }
   }
-  if (MAP.id !== 'park' && chance(0.22 + 0.15 * G.d)) {
-    G.out.push({ t: 'critter', kind: MAP.id === 'glacier' ? 'penguin' : 'bunny', x: rand(G.L, G.R), y: rand(G.y0 + 40, G.y1 - 40),
-      dir: chance(0.5) ? 1 : -1, sp: rand(70, 120), ph: rand(0, TAU), r: 9, flee: 0 });
+  if (MAP.id !== 'park' && chance(MAP.id === 'night' ? 0.4 + 0.25 * G.d : 0.22 + 0.15 * G.d)) {
+    // wildlife crossing the slope; at night it is foxes, quick and hard to spot
+    const kind = MAP.id === 'glacier' ? 'penguin' : MAP.id === 'night' ? 'fox' : 'bunny';
+    G.out.push({ t: 'critter', kind, x: rand(G.L, G.R), y: rand(G.y0 + 40, G.y1 - 40),
+      dir: chance(0.5) ? 1 : -1, sp: kind === 'fox' ? rand(150, 230) : rand(70, 120), ph: rand(0, TAU), r: 9, flee: 0 });
   }
 }
 // Deep Glades: dense trees in deep powder with wells, low branches, tight gaps, pillows and fallen logs to ride
@@ -1693,8 +1734,16 @@ function genGlade(G) {
     const t = mkTree(rand(G.L, G.R), rand(G.y0, G.y1), rand(0.85, 1.4));
     if (place(G, t, 34)) { placed++; trees.push(t); }
   }
-  // tree wells around some of the bigger trees
-  for (const t of trees) if (t.sc > 1.1 && chance(0.35 + 0.25 * d)) G.out.push({ t: 'well', x: t.x, y: t.y + 0.1, r: 26 * t.sc });
+  // tree wells around some of the bigger trees (never overlapping each other, or a log, pillow or gap)
+  const wells = [];
+  for (const t of trees) {
+    if (t.sc <= 1.1 || !chance(0.35 + 0.25 * d)) continue;
+    const r = 26 * t.sc;
+    if (wells.some(w => Math.hypot(w.x - t.x, (w.y - t.y) * 1.6) < w.r + r + 4)) continue;
+    if (gReserved.some(q => Math.hypot(q.x - t.x, q.y - t.y) < q.r + r * 0.8)) continue;
+    const w = { t: 'well', x: t.x, y: t.y + 0.1, r };
+    wells.push(w); G.out.push(w);
+  }
 }
 const MAP_GEN = { pine: G => genForest(G, false), night: G => genForest(G, true), park: genPark, glacier: genGlacier, glade: genGlade };
 
@@ -2113,7 +2162,16 @@ function spawnRival() {
 function updateRivals(dt) {
   npcTimer -= dt;
   if (npcTimer <= 0) { if (npcs.length < 3) spawnRival(); npcTimer = rand(7, 13); }
+  if (maxDist > 40) { lucaTimer -= dt; if (lucaTimer <= 0) lucaTimer = !npcs.some(n => n.pro) && spawnLuca() ? rand(50, 80) : 4; }
   for (const n of npcs) {
+    if (n.pro) {
+      updateLuca(n, dt);
+      const rel = Math.sign(P.y - n.y) || n.rel;
+      if (n.rel > 0 && rel < 0 && !n.passed && Math.abs(P.x - n.x) < 420) { n.passed = true; n.trickCD = Math.min(n.trickCD, rand(0.7, 1.3)); popup(`Luca: ${pick(LUCA_LINES)}`, '#ffd43b', false, n.x, n.y - n.z - 40); }
+      if (n.rel < 0 && rel > 0 && Math.abs(P.x - n.x) < 220 && P.crashT <= 0) { stats.lucaPasses++; addPoints(300, 'You passed Luca!', '#ffd43b', true); bumpCombo(2); }
+      n.rel = rel;
+      continue;
+    }
     if (n.crashT > 0) { n.crashT -= dt; n.speed *= Math.exp(-4 * dt); n.y += n.speed * dt; continue; }
     let want = Math.sin(time * 0.7 + n.ph) * 0.35;
     const look = 70 + n.speed * 0.25;
@@ -2134,6 +2192,132 @@ function updateRivals(dt) {
     }
   }
   npcs = npcs.filter(n => n.y > P.y - 1300 && n.y < P.y + 2600);
+}
+// ---- Luca: a pro who bombs past you now and then, hunting down every jump and rail and sending tricks no one
+// else could land (five back flips off the smallest kicker is a normal day for him)
+const LUCA_FLIPS = ['', 'Back Flip', 'Double Back Flip', 'Triple Back Flip', 'Quad Back Flip', 'Quintuple Back Flip', 'Sextuple Back Flip', 'Septuple Back Flip'];
+const LUCA_GRABS = { side: 'Mute', nose: 'Nose Grab', tail: 'Tail Grab', both: 'Truck Driver' };
+const LUCA_LINES = ['"Coming through!"', '"Watch this one!"', '"Too slow!"', '"See you at the bottom!"', '"Nice line — mine\'s better!"'];
+let lucaTimer = 22;
+function lucaSuit() {
+  return Object.assign(makeSuit('classic', 'gold', 'guy', '#2a1c14'), {
+    jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', glove: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f',
+    pack: '#2a3242', trim: '#ffd43b', visor: '#a88614' });
+}
+function spawnLuca() {
+  const v = viewRect();
+  for (let t = 0; t < 12; t++) {
+    const x = clamp(P.x + rand(-260, 260), -COURSE_HALF + 90, COURSE_HALF - 90), y = v.top - rand(150, 230);
+    if (solidNear(x, y, 50)) continue;
+    npcs.push({ pro: true, name: 'Luca', x, y, z: 0, gz: 0, ang: 0, speed: Math.max(P.speed + 220, 540), ph: rand(0, TAU), turn: 0,
+      suit: lucaSuit(), crashT: 0, rel: 1, air: null, grind: null, flip: 0, spin: 0, grabAmt: 0, passed: false, trickCD: rand(1.5, 2.5) });
+    popup('Luca the pro is coming through!', '#ffd43b', true);
+    return true;
+  }
+  return false;
+}
+// the nearest jump or rail ahead that he can still steer onto
+function lucaTarget(n) {
+  let best = null, bd = 1e9;
+  for (let i = lowerBound(n.y + 120); i < objs.length; i++) {
+    const o = objs[i], dy = o.y - n.y;
+    if (dy > 950) break;
+    if (o.t !== 'ramp' && o.t !== 'rail') continue;
+    const tx = o.t === 'rail' ? o.x - o.ux * 30 : o.x, ty = o.t === 'rail' ? o.y - o.uy * 30 : o.y + o.h / 2;
+    const dx = Math.abs(tx - n.x);
+    if (dx > (ty - n.y) * 0.75 + 20) continue;
+    const d = dx + (ty - n.y) * 0.5;
+    if (d < bd) { bd = d; best = [tx, ty, o]; }
+  }
+  return best;
+}
+// anything solid ahead, except what he is aiming for and the gaps he will fly over
+function lucaBlock(x, y, tgt) {
+  for (let i = lowerBound(y - 80); i < objs.length; i++) {
+    const o = objs[i]; if (o.y > y + 80) break;
+    if (tgt && o === tgt[2]) continue;
+    if ((o.t === 'tree' || o.t === 'spire' || o.t === 'rock' || o.t === 'log' || o.t === 'snowman' || o.t === 'crev' || o.t === 'cat')
+      && Math.abs(o.x - x) < 26 + (o.r || 20) && Math.abs(o.y - y) < 46) return o;
+  }
+  return null;
+}
+function lucaLaunch(n, A) {
+  n.air = Object.assign({ t: 0, dir: chance(0.5) ? 1 : -1 }, A);
+  n.gz = 0;
+  puff(n.x, n.y, 8);
+}
+function lucaJump(n, o) {
+  const small = o.mul <= 1.12 || o.pillow;
+  const flips = small ? 5 : o.mul >= 2.2 ? randi(6, 7) : randi(4, 6);
+  const spins = pick([0, 0, 1, 2, 2, 3, 4]), grab = pick(['side', 'nose', 'tail', 'both', null]);
+  const name = [LUCA_FLIPS[flips], ['', '360', '720', '1080', '1440'][spins], grab ? LUCA_GRABS[grab] : ''].filter(Boolean).join(' ');
+  lucaLaunch(n, { H: 150 + 60 * o.mul + flips * 8, T: 1.55 + 0.3 * o.mul + flips * 0.04, flips, spins, grab, z0: o.lipH, name });
+}
+function lucaLanded(n, A) {
+  puff(n.x, n.y, 14);
+  const v = viewRect();
+  if (n.x > v.left - 40 && n.x < v.right + 40 && n.y > v.top - 40 && n.y < v.bottom + 40) {
+    popup(`LUCA: ${A.name}!`, '#ffd43b', false, n.x, n.y - 30);
+    ring(n.x, n.y, '#ffd43b', 90);
+    tone(660, 0.12, 'triangle', 0.06); tone(990, 0.18, 'triangle', 0.05, 0, 0.08);
+  }
+}
+function updateLuca(n, dt) {
+  if (n.air) {
+    // a huge floaty arc, with the flips and spins timed to finish just as he touches down
+    const A = n.air; A.t += dt;
+    const u = clamp(A.t / A.T, 0, 1), k = clamp((u - 0.05) / 0.85, 0, 1), e = k * k * (3 - 2 * k);
+    n.z = A.z0 * (1 - u) + A.H * 4 * u * (1 - u);
+    n.flip = -TAU * A.flips * e; n.spin = TAU * A.spins * e * A.dir;
+    n.grabAmt = A.grab ? clamp(Math.min((u - 0.15) / 0.12, (0.82 - u) / 0.12), 0, 1) : 0;
+    n.x = clamp(n.x + Math.sin(n.ang) * n.speed * dt, -COURSE_HALF + 30, COURSE_HALF - 30);
+    n.y += Math.cos(n.ang) * n.speed * dt;
+    if (u >= 1) { n.air = null; n.z = 0; n.flip = 0; n.spin = 0; n.grabAmt = 0; lucaLanded(n, A); }
+    return;
+  }
+  if (n.grind) {
+    // a boardslide down the whole rail, then a 720 off the end
+    const G = n.grind, o = G.o;
+    G.t += n.speed * dt;
+    n.x = o.x + o.ux * G.t; n.y = o.y + o.uy * G.t; n.z = railH(o, Math.min(G.t, o.len)); n.ang = o.a;
+    if (Math.random() < dt * 40) particles.push({ x: n.x + rand(-4, 4), y: n.y, z: n.z, vx: rand(-60, 60) - o.ux * 80, vy: -o.uy * rand(40, 120), vz: rand(30, 140), life: 0.35, max: 0.35, r: rand(1, 2), col: '#ffd27a', g: 600 });
+    if (G.t >= o.len) { n.grind = null; lucaLaunch(n, { H: 70, T: 0.9, flips: 0, spins: 2, grab: null, z0: n.z, name: `${JIB[o.kind].n[1]} to 720 out` }); }
+    return;
+  }
+  // on the snow: line up the next jump or rail, dodge everything else (you included). With no jump close by
+  // he just pops something absurd off flat ground every few seconds
+  n.trickCD -= dt;
+  const tgt = lucaTarget(n);
+  if (n.trickCD <= 0 && (!tgt || tgt[1] - n.y > 520)) {
+    n.trickCD = rand(2.6, 4.2);
+    const flips = randi(2, 4), spins = pick([0, 1, 2]), grab = pick([null, 'side', 'nose']);
+    lucaLaunch(n, { H: 105 + flips * 16, T: 1.1 + flips * 0.13, flips, spins, grab, z0: 0, name: [LUCA_FLIPS[flips], ['', '360', '720'][spins], grab ? LUCA_GRABS[grab] : '', 'off flat ground'].filter(Boolean).join(' ') });
+    return;
+  }
+  let want = tgt ? clamp(Math.atan2(tgt[0] - n.x, Math.max(60, tgt[1] - n.y)), -0.85, 0.85) : Math.sin(time * 0.8 + n.ph) * 0.25;
+  const look = 60 + n.speed * 0.22, ax = n.x + Math.sin(n.ang) * look, ay = n.y + Math.cos(n.ang) * look;
+  const block = lucaBlock(ax, ay, tgt);
+  if (block) want = block.x > n.x ? -0.95 : 0.95;
+  if (Math.abs(P.x - ax) < 42 && Math.abs(P.y - ay) < 80 && P.z < 30) want = P.x > n.x ? -0.9 : 0.9;
+  if (Math.abs(n.x) > COURSE_HALF - 80) want = -Math.sign(n.x) * 0.6;
+  const turn = clamp(want - n.ang, -3.2 * dt, 3.2 * dt);
+  n.ang += turn; n.turn = turn / dt / 3.2;
+  n.speed += (clamp(P.speed + 150, 560, 820) - n.speed) * Math.min(1, dt * 1.2);
+  const px = n.x, py = n.y;
+  n.x = clamp(n.x + Math.sin(n.ang) * n.speed * dt, -COURSE_HALF + 30, COURSE_HALF - 30);
+  n.y += Math.cos(n.ang) * n.speed * dt;
+  n.gz = 0;
+  for (let i = lowerBound(n.y - 260); i < objs.length; i++) {
+    const o = objs[i]; if (o.y > n.y + 40) break;
+    if (o.t === 'ramp' && Math.abs(n.x - o.x) < o.w / 2) {
+      const top = o.y - o.h / 2, lip = o.y + o.h / 2;
+      if (n.y > top && n.y < lip) n.gz = rampZ(o, (n.y - top) / o.h);
+      if (py < lip && n.y >= lip) { lucaJump(n, o); return; }
+    } else if (o.t === 'rail') {
+      const t0 = (px - o.x) * o.ux + (py - o.y) * o.uy, t1 = (n.x - o.x) * o.ux + (n.y - o.y) * o.uy, d1 = (n.x - o.x) * o.uy - (n.y - o.y) * o.ux;
+      if (t0 < 0 && t1 >= 0 && Math.abs(d1) < o.tol + 8) { n.grind = { o, t: t1 }; n.speed = Math.min(n.speed, 430); return; }
+    }
+  }
 }
 // ---- missions
 function missionVal(m) { return m.stat === 'dist' ? maxDist : m.stat === 'score' ? score : (stats[m.stat] || 0); }
@@ -2399,7 +2583,7 @@ function collide() {
         const cz = o.kind === 'bunny' ? Math.abs(Math.sin(o.ph)) * 10 : 0;
         if (canHit && P.z < 20 + cz && dx * dx + (dy * 1.4) ** 2 < (o.r + PR) ** 2) {
           o.flee = 3; o.dir = Math.sign(o.x - P.x) || 1;
-          crash(o.kind === 'bunny' ? pick(['Bunny crossing!', 'Hare raising!']) : pick(['Penguin crossing!', 'Waddled into!']), null);
+          crash(o.kind === 'bunny' ? pick(['Bunny crossing!', 'Hare raising!']) : o.kind === 'fox' ? pick(['Outfoxed!', 'Fox crossing!']) : pick(['Penguin crossing!', 'Waddled into!']), null);
         }
         break;
       }
@@ -2563,7 +2747,7 @@ function updatePlay(dt) {
     if (o.t === 'eyes') { if (!o.gone && Math.hypot(P.x - o.x, P.y - o.y) < 170) o.gone = true; continue; }
     if (o.t !== 'critter') continue;
     o.flee -= dt;
-    o.ph += dt * (o.kind === 'bunny' ? 9 : 5);
+    o.ph += dt * (o.kind === 'bunny' ? 9 : o.kind === 'fox' ? 14 : 5);
     o.x += o.dir * o.sp * (o.flee > 0 ? 2.6 : 1) * dt;
     if (Math.abs(o.x) > COURSE_HALF - 30) o.dir = -Math.sign(o.x);
   }
@@ -3800,6 +3984,21 @@ function drawCritter(o) {
     ctx.restore();
     ctx.fillStyle = '#1b1f29'; ell(x + d * 8, y - 11, 0.9, 0.9); ctx.fill();
     ctx.fillStyle = '#ff9fb4'; ell(x + d * 10, y - 9.5, 0.9, 0.8); ctx.fill();
+  } else if (o.kind === 'fox') {
+    // a fox at full gallop: bushy white-tipped tail, black stockings, ears pricked
+    const run = Math.sin(o.ph), y = o.y - Math.abs(run) * 2;
+    ctx.fillStyle = 'rgba(70,100,150,0.2)'; ell(x, o.y + 1, 11, 2.6); ctx.fill();
+    ctx.fillStyle = '#c4581d'; ctx.beginPath(); ctx.ellipse(x - d * 11, y - 7 + run, 7, 3.2, d * 0.35, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ell(x - d * 16.5, y - 6 + run * 1.2, 2.4, 2); ctx.fill();
+    ctx.strokeStyle = '#2b1a10'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    line(x - d * 4, y - 3, x - d * (4 + run * 3), o.y); line(x + d * 4, y - 3, x + d * (4 - run * 3), o.y);
+    ctx.fillStyle = '#e06a22'; ell(x, y - 6, 8.5, 4.2); ctx.fill(); ell(x + d * 8, y - 9, 4, 3.4); ctx.fill();
+    ctx.fillStyle = '#fff3e6'; ell(x + d * 9.5, y - 7.5, 2.6, 1.6); ctx.fill(); ell(x + d * 3, y - 4.5, 3.5, 1.8); ctx.fill();
+    ctx.fillStyle = '#2b1a10';
+    ctx.beginPath(); ctx.moveTo(x + d * 6, y - 11); ctx.lineTo(x + d * 6.8, y - 15.5); ctx.lineTo(x + d * 8.6, y - 11.5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + d * 8.5, y - 11.5); ctx.lineTo(x + d * 9.8, y - 15.5); ctx.lineTo(x + d * 10.6, y - 11); ctx.fill();
+    ell(x + d * 12, y - 8.2, 0.9, 0.8); ctx.fill();
+    ctx.fillStyle = '#d6ff7a'; ell(x + d * 9.3, y - 9.6, 0.8, 0.7); ctx.fill();
   } else {
     const wob = Math.sin(o.ph) * 0.15, y = o.y;
     ctx.fillStyle = 'rgba(70,100,150,0.2)'; ell(x, y + 1, 9, 3); ctx.fill();
@@ -3814,7 +4013,32 @@ function drawCritter(o) {
     ctx.restore();
   }
 }
+function drawLuca(n) {
+  const z = n.z + n.gz, sk = 1 + z / 260, air = !!n.air, G = n.grind, e = clamp(n.turn, -1, 1) * 0.3;
+  ctx.fillStyle = `rgba(55,85,135,${0.18 / (1 + z / 60)})`; ell(n.x + z * 0.12, n.y + 1, 14 * sk, 5 * sk); ctx.fill();
+  ctx.save(); ctx.translate(n.x, n.y - z);
+  const zs = 1 + z / 520; ctx.scale(zs, zs);
+  drawRig({ yaw: n.ang + n.spin + (G ? Math.PI / 2 : 0), flip: n.flip, roll: air || G ? 0 : e, edge: air || G ? 0 : e, pivot: 14, tuck: air ? 0 : 0.35,
+    air: air ? 1 : 0, grab: air ? n.air.grab : null, grabAmt: n.grabAmt, suit: n.suit, shadowZ: z, lean: 0.9, spread: G ? 0.85 : 0,
+    twist: air || G ? 0 : -n.ang * 0.3, look: clamp(n.turn, -1, 1) * 0.3, wind: [-Math.sin(n.ang) * 0.9, -Math.cos(n.ang) * 0.9] });
+  ctx.restore();
+  // a gold name tag, and a live count of the flips while he is up there
+  const ty = n.y - z - 50 * zs;
+  ctx.font = `900 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const tw = ctx.measureText('★ LUCA').width + 14;
+  ctx.fillStyle = 'rgba(14,22,40,0.85)'; rr(n.x - tw / 2, ty - 8, tw, 16, 8); ctx.fill();
+  ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 1.2; rr(n.x - tw / 2, ty - 8, tw, 16, 8); ctx.stroke();
+  ctx.fillStyle = '#ffd43b'; ctx.fillText('★ LUCA', n.x, ty + 0.5);
+  if (air && n.air.flips) {
+    const done = Math.min(n.air.flips, Math.floor(Math.abs(n.flip) / TAU + 0.15));
+    if (done > 0) {
+      ctx.font = `italic 900 ${16 + done * 2}px ${FONT}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(14,22,40,0.9)';
+      ctx.strokeText(`FLIP ×${done}`, n.x + 44, ty - 14); ctx.fillStyle = '#ffd43b'; ctx.fillText(`FLIP ×${done}`, n.x + 44, ty - 14);
+    }
+  }
+}
 function drawRival(n) {
+  if (n.pro) { drawLuca(n); return; }
   ctx.fillStyle = 'rgba(55,85,135,0.14)'; ell(n.x, n.y + 1, 13, 4.5); ctx.fill();
   ctx.save(); ctx.translate(n.x, n.y);
   if (n.crashT > 0) drawRig({ yaw: n.ang, flip: 0.3, roll: 1.4, pivot: 3, tuck: 0.3, sprawl: 1, grab: null, skis: false, suit: n.suit, shadowZ: 0, wind: [0, -0.15] });
@@ -4542,7 +4766,9 @@ function drawWorld(v) {
   if (MAP.id === 'park') drawFence(v);
   const skierOnTop = P.z + P.gz > 30 || !!P.grind;
   let drawn = false;
-  const riders = npcs.filter(n => n.y > v.top - 60 && n.y < yb && n.x > xl && n.x < xr).sort((a, b) => a.y - b.y);
+  // riders on the snow are depth-sorted with the scenery; Luca in the air or on a rail is drawn above it
+  const onTop = n => n.pro && (n.air || n.grind);
+  const riders = npcs.filter(n => !onTop(n) && n.y > v.top - 60 && n.y < yb && n.x > xl && n.x < xr).sort((a, b) => a.y - b.y);
   let ri = 0;
   const lo2 = lowerBound(v.top - 60);
   for (let i = lo2; i < objs.length; i++) {
@@ -4553,6 +4779,7 @@ function drawWorld(v) {
     drawUprightObj(o);
   }
   while (ri < riders.length) drawRival(riders[ri++]);
+  for (const n of npcs) if (onTop(n) && n.y > v.top - 200 && n.y < yb && n.x > xl && n.x < xr) drawRival(n);
   if (!drawn) drawSkier();
   drawLift(v);
   drawCloudShadows(v);
@@ -4595,8 +4822,9 @@ function drawNight(v) {
   if (state !== 'menu') {
     const [sx, sy] = toScreen(P.x, P.y - P.z);
     const a = P.grind ? P.grind.o.a : P.mAng;
+    const dk = 1 - 0.22 * clamp(maxDist / 2600, 0, 1);   // the deeper into the woods, the shorter the beam seems to reach
     hole(sx, sy - 10 * s, 70 * s, 1);
-    cone(sx, sy - 12 * s, Math.atan2(Math.cos(a), Math.sin(a)), 0.62, 420 * s);
+    cone(sx, sy - 12 * s, Math.atan2(Math.cos(a), Math.sin(a)), 0.62, 420 * s * dk);
     if (P.flare > 0) { const k = Math.min(1, P.flare); hole(sx, sy, 440 * s * (0.6 + 0.4 * k), k); flareAt = [sx, sy, k]; }
   }
   const lo = lowerBound(v.top - 100);
@@ -4608,6 +4836,8 @@ function drawNight(v) {
     else if (o.t === 'flare' && !o.got) { const [fx, fy] = toScreen(o.x, o.y - 24); hole(fx, fy, 30 * s, 0.9); }
     else if (o.t === 'eyes' && !o.gone) eyes.push(o);
   }
+  // Luca wears a headlamp too
+  for (const n of npcs) if (n.pro) { const [lx, ly] = toScreen(n.x, n.y - n.z - 14); hole(lx, ly, 62 * s, 0.85); cone(lx, ly, Math.atan2(Math.cos(n.ang), Math.sin(n.ang)), 0.45, 200 * s); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(darkC, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -5420,7 +5650,7 @@ function refreshMenu() {
   [...$('diffs').children].forEach((c, i) => c.classList.toggle('sel', i === diffIdx));
   $('modeRow').classList.toggle('focus', menuRow === 1);
   $('diffRow').classList.toggle('focus', menuRow === 2);
-  const b = getBest(), tag = `${MAP.name} (${RATINGS[MAP.rate]}) · ${MODE.name} · ${DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}`;
+  const b = getBest(), tag = `${mapTag(MAP)} · ${MODE.name} · ${DIFF.name}${trickBonus() > 1 ? " · tricks 2×" : ""}`;
   $('bestLbl').innerHTML = b ? `<b>${fmt(b)}</b><br>your best on ${tag}` : `${tag}<br>no best score yet — go set one!`;
   [...$('maps').children].forEach((c, i) => {
     const m = MAPS[i], k = DIFF.id === 'normal' ? `${m.id}.${MODE.id}` : `${m.id}.${MODE.id}.${DIFF.id}`, mb = bests[k] || 0;
@@ -5463,7 +5693,7 @@ function gameOver(reason) {
   endStroke();
   const titles = { buried: ['BURIED!', 'The avalanche caught up with you.'], wipeout: ['WIPEOUT!', 'One life — and that was it.'], end: ['RUN COMPLETE', 'Nice session!'] };
   $('overTitle').textContent = titles[reason][0]; $('overTitle').className = 'big ' + reason;
-  $('overSub').textContent = `${titles[reason][1]}  ·  ${MAP.name} (${RATINGS[MAP.rate]}) · ${MODE.name} · ${DIFF.name}`;
+  $('overSub').textContent = `${titles[reason][1]}  ·  ${mapTag(MAP)} · ${MODE.name} · ${DIFF.name}`;
   // the score counts up once the panel appears
   const t0 = performance.now() + overDelay() * 1000, target = score;
   $('overScore').textContent = '0';

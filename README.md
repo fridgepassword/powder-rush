@@ -10,10 +10,10 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 | Map | Rating | Special feature |
 |---|---|---|
 | **Pine Valley** | 🟢 Easy | Forest run with slalom gates, logs and moguls — a snowcat grooms the slope; ride its fresh corduroy for speed |
-| **Terrain Park** | 🟢 Easy | Kickers from S up to a giant **XXL**, gap jumps, long rails, kinked, down, wave & rainbow rails, tubes, boxes, picnic tables and jib lines, hoops, P-A-R-K letters and **judges' zones** (tricks ×1.5) — with a chairlift, DJ tent and cheering fans beside the course |
+| **Terrain Park** | 🟧 Park | Kickers from S up to a giant **XXL**, gap jumps, long rails, kinked, down, wave & rainbow rails, tubes, boxes, picnic tables and jib lines, hoops, P-A-R-K letters and **judges' zones** (tricks ×1.5) — with a chairlift, DJ tent and cheering fans beside the course |
 | **Glacier Pass** | 🟦 Intermediate | Slick ice, crevasses and frozen spires — **ice balls** are lobbed slowly across the slope |
 | **Deep Glades** | ◆ Advanced | Deep-powder tree skiing: duck branches, thread gaps, escape tree wells — and dodge **snow bombs** from the trees |
-| **Midnight Woods** | ◆◆ Expert | **Pitch black** — only your headlamp and flares light the way, and something is watching |
+| **Midnight Woods** | ◆◆ Expert | The hardest run: **pitch black**, thick forest, rocks, logs, black ice and foxes darting across — only your headlamp and flares light the way, and they get scarcer the deeper you go |
 
 ## Modes & difficulty
 - **Avalanche** — outrun the slide; crashes cost time
@@ -36,7 +36,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 Touch: hold left/right to steer (spin in the air), hold the middle to tuck (grab in the air), swipe up to jump, swipe up/down in the air to flip.
 
 ## Extras
-Pick a **boy or girl rider** on the menu (every outfit fits both). Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis, tree styles, snow colours, trails and weather.
+Pick a **boy or girl rider** on the menu (every outfit fits both). Watch out for **Luca**, a pro who bombs past you now and then and sends impossible tricks — five back flips off the smallest kicker — then try to overtake him. Power-ups (Magnet, Shield, Boost, 2× Points, Ghost), smashable snowmen, wildlife, rival skiers, missions, a combo timer, and a **Shop** where snowflakes buy outfits, skis, tree styles, snow colours, trails and weather.
 
 ## Look
 Every map has its own hand-painted snow, snow-laden trees and ice spires casting soft shadows, sculpted kickers with marked landings, and drifting cloud shadows. The menu shows each mountain with the game's own art.
