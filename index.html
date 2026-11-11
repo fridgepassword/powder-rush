@@ -228,6 +228,7 @@
   #pauseBtn { position: fixed; right: 14px; bottom: 14px; z-index: 1; width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); display: grid; place-items: center;
     background: rgba(12,28,58,0.6); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #pauseBtn svg { width: 18px; height: 18px; fill: currentColor; }
+  body.touch #pauseBtn { top: 112px; bottom: auto; }
   .coinline { margin-top: 12px; font-weight: 900; color: var(--ice); font-size: 17px; }
   .coinline small { display: block; font-weight: 600; font-size: 12px; color: var(--text2); margin-top: 2px; }
   .omis { margin-top: 8px; text-align: left; font-size: 13px; }
@@ -378,7 +379,7 @@
       <div><b>Landing</b>Watch the trick gauge: green = clean, yellow = sketchy save, red = bail. Easy saves close calls for you.</div>
     </div>
     <div class="how touchonly">
-      <div><b>Touch</b>Hold left / right to steer (spins in the air) · hold the middle to tuck (grabs in the air) · swipe up to jump · in the air swipe up / down and hold to flip</div>
+      <div><b>Touch</b>Hold the left or right half of the screen to steer, and let go to straighten out · hold both halves to tuck (grab in the air) · flick up to jump · in the air hold a side to spin, flick up / down and hold to flip</div>
     </div>
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
@@ -1312,7 +1313,7 @@ cv.addEventListener('touchstart', e => {
   e.preventDefault(); initAudio();
   if (!isTouch) { isTouch = true; document.body.classList.add('touch'); }
   if (state !== 'play') return;
-  for (const t of e.changedTouches) touches.set(t.identifier, { x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY, vert: 0 });
+  for (const t of e.changedTouches) touches.set(t.identifier, { x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY, vert: 0, t0: performance.now() });
   updTouch();
 }, { passive: false });
 cv.addEventListener('touchmove', e => {
@@ -1320,8 +1321,9 @@ cv.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     const s = touches.get(t.identifier); if (!s) continue;
     s.x = t.clientX; s.y = t.clientY;
-    const dy = s.y - s.y0;
-    if (!s.vert && Math.abs(dy) > 45) {
+    const dy = s.y - s.y0, dx = s.x - s.x0;
+    // a swipe is a quick, mostly vertical flick: a thumb that drifts while it holds a side keeps steering
+    if (!s.vert && Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) * 1.4 && performance.now() - s.t0 < 350) {
       s.vert = Math.sign(dy);
       if (s.vert < 0 && !P.air) hop();
     }
@@ -1333,12 +1335,13 @@ cv.addEventListener('touchend', endTouch, { passive: false });
 cv.addEventListener('touchcancel', endTouch, { passive: false });
 function updTouch() {
   touch.left = touch.right = touch.mid = touch.flipF = touch.flipB = false;
+  // each half of the screen steers its way; a thumb on both halves tucks (grabs in the air)
+  let l = false, r = false;
   for (const s of touches.values()) {
     if (s.vert) { if (s.vert < 0) touch.flipF = true; else touch.flipB = true; continue; }
-    if (s.x < W * 0.38) touch.left = true;
-    else if (s.x > W * 0.62) touch.right = true;
-    else touch.mid = true;
+    if (s.x < W / 2) l = true; else r = true;
   }
+  touch.mid = l && r; touch.left = l && !r; touch.right = r && !l;
 }
 
 function readInput() {
@@ -2646,7 +2649,12 @@ function stepGround(dt, inp) {
   P.tuck = inp.tuck && !inp.brake;
   P.brake = inp.brake && !P.onIce;
   const rate = (3.5 - P.speed / 900) * (P.tuck ? 0.78 : 1) * (P.onIce ? 0.35 : 1);
-  P.ang = clamp(P.ang + turn * rate * dt, -1.62, 1.62);
+  if (isTouch) {
+    // touch steering: holding a side swings you round to a set angle, and letting go straightens you out, so
+    // there is no need to steer back the other way after every turn (keyboard steering is unchanged)
+    const k = (P.onIce ? 1.4 : 3.6) * dt;
+    P.ang += clamp(turn * 1.05 - P.ang, -k, k);
+  } else P.ang = clamp(P.ang + turn * rate * dt, -1.62, 1.62);
   if (P.onMogul) P.ang = clamp(P.ang + (Math.random() - 0.5) * dt * 6, -1.62, 1.62);
   const diff = wrapAng(P.ang - P.mAng);
   P.mAng += diff * Math.min(1, (P.onIce ? 1.3 : 13) * dt);
@@ -2928,7 +2936,7 @@ function step(dt, inp) {
 
 const TIPS = {
   gate: ['Ski between the flags — every gate builds your combo!', 'Ski between the flags — every gate builds your combo!'],
-  ramp: ['Kicker! In the air: ← → spin, ↑ ↓ flip, hold W A S D to grab. Land straight!', 'Kicker! In the air: hold a side to spin, swipe up/down to flip, hold middle to grab'],
+  ramp: ['Kicker! In the air: ← → spin, ↑ ↓ flip, hold W A S D to grab. Land straight!', 'Kicker! In the air: hold a side to spin, flick up/down to flip, hold both sides to grab'],
   rail: ['Rail! Ride on from the start, balance with A / D, hold ← or → to slide', 'Rail! Ride on from the start and balance with left / right'],
   gap: ['Gap jump! Hit it with speed (hold S) or you will come up short', 'Gap jump! Hit it with speed or you will come up short'],
   hoop: ['Hoop! Fly through it off the kicker for bonus points', 'Hoop! Fly through it off the kicker for bonus points'],
@@ -5676,11 +5684,30 @@ function drawHUD() {
     if (!go) { ctx.font = `800 ${Math.round(Math.min(20, W * 0.04))}px ${FONT}`; ctx.lineWidth = 5; ctx.strokeText('RACE LUCA TO THE FINISH', 0, 78); ctx.fillStyle = '#ffffff'; ctx.fillText('RACE LUCA TO THE FINISH', 0, 78); }
     ctx.restore();
   }
-  if (tip) { ctx.globalAlpha = clamp(Math.min(tip.t, 3.6 - tip.t) * 3, 0, 1); pill(tip.text, H - 92, '#ffe27a'); ctx.globalAlpha = 1; }
+  if (isTouch && state === 'play') {
+    // touch pads: each half of the screen steers; they light up while held (both = tuck)
+    const pw = Math.min(150, W * 0.34), ph = 56, py = H - ph - 16, a = hintT > 0 ? 1 : 0.6;
+    for (const [side, on] of [[-1, touch.left || touch.mid], [1, touch.right || touch.mid]]) {
+      const x = side < 0 ? 14 : W - 14 - pw, cx = x + pw / 2, cy = py + ph / 2;
+      ctx.globalAlpha = (on ? 0.95 : 0.32) * a;
+      glass(x, py, pw, ph, 18, on ? 'rgba(255,212,59,0.95)' : null);
+      ctx.strokeStyle = on ? '#ffd43b' : '#ffffff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const off of [-8, 6]) { const tx = cx + side * (off + 6), ax = tx - side * 10; ctx.beginPath(); ctx.moveTo(ax, cy - 10); ctx.lineTo(tx, cy); ctx.lineTo(ax, cy + 10); ctx.stroke(); }
+    }
+    ctx.globalAlpha = 1;
+    if (hintT > 0) {
+      ctx.globalAlpha = clamp(hintT, 0, 1);
+      ctx.font = `800 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(14,28,54,0.8)'; ctx.strokeText('HOLD BOTH TO TUCK', W / 2, py + ph / 2);
+      ctx.fillStyle = '#ffffff'; ctx.fillText('HOLD BOTH TO TUCK', W / 2, py + ph / 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (tip) { ctx.globalAlpha = clamp(Math.min(tip.t, 3.6 - tip.t) * 3, 0, 1); pill(tip.text, H - (isTouch ? 148 : 92), '#ffe27a'); ctx.globalAlpha = 1; }
   if (hintT > 0) {
     ctx.globalAlpha = clamp(hintT, 0, 1);
-    pill(isTouch ? 'Hold left / right to steer · middle to tuck · swipe up to jump'
-      : 'A D steer · S tuck · W brake · SPACE jump · Air: ← → spin  ↑ ↓ flip  WASD grab', H - 46);
+    pill(isTouch ? 'Hold a side to steer · both sides to tuck · flick up to jump'
+      : 'A D steer · S tuck · W brake · SPACE jump · Air: ← → spin  ↑ ↓ flip  WASD grab', H - (isTouch ? 102 : 46));
     ctx.globalAlpha = 1;
   }
   if (muted) { ctx.font = `700 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = MAP.id === 'night' ? 'rgba(220,230,255,0.6)' : 'rgba(30,50,80,0.6)'; ctx.fillText('SOUND OFF (M)', 14, H - 12); }

@@ -34,7 +34,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 | Rails | `A` / `D` balance, hold `←` / `→` to slide, `Space` to pop |
 | Pause / mute | `Esc` / `M` |
 
-Touch: hold left/right to steer (spin in the air), hold the middle to tuck (grab in the air), swipe up to jump, swipe up/down in the air to flip.
+Touch: hold the left or right half of the screen to steer (spin in the air) and let go to straighten out, hold both halves to tuck (grab in the air), flick up to jump, flick up/down in the air to flip.
 
 ## Two ways in
 The **home menu** has every mountain, mode and difficulty on one screen. Or **visit the Lodge**: hang out at the base lodge, ride the Summit Express chairlift to the top (a 3-second ride), then pick your run from the trail signs at the summit.
