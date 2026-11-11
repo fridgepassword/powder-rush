@@ -1427,7 +1427,7 @@ function reset() {
   shake = 0; zoneIdx = 0; banner = null; overT = 0; hintT = 8; tip = null; newBest = false;
   stats = { gates: 0, flakes: 0, crashes: 0, tricks: 0, grinds: 0, hoops: 0, words: 0, saves: 0, bestTrick: '—', bestTrickPts: 0, maxSpeed: 0,
     backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, raceWins: 0, lucaWins: 0, pipeAirs: 0, closeCalls: 0, gaps: 0, threads: 0, maxTurns: 0, logRides: 0, wells: 0 };
-  camX = 0; camY = 0; anchor = 0.28; viewS = targetScale();
+  camX = 0; camY = 0; anchor = Math.max(0.28, minAnchor()); viewS = targetScale();
   ensureGen();
 }
 
@@ -3226,7 +3226,7 @@ function updatePopups(dt) {
 function updateCamera(dt) {
   viewS += (targetScale() - viewS) * Math.min(1, dt * 2);
   const prox = state === 'play' && isAva() ? clamp(1 - (P.y - avaY) / 700, 0, 1) : 0;
-  anchor += (0.28 + 0.1 * prox - anchor) * Math.min(1, dt * 3);
+  anchor += (Math.max(0.28, minAnchor()) + 0.1 * prox - anchor) * Math.min(1, dt * 3);   // never up under the HUD
   const halfW = W / 2 / viewS;
   const lim = COURSE_HALF + 330 - halfW;
   const want = state === 'menu' ? Math.sin(time * 0.17) * 260 : P.x;
@@ -5249,11 +5249,21 @@ function panel(x, y, w, h, r = 12, col) {
 }
 function toScreen(x, y) { return [(x - camX) * viewS + W / 2, (y - camY) * viewS + H * anchor]; }
 function pill(text, y, col) {
-  ctx.font = `700 ${W < 500 ? 12 : 14}px ${FONT}`;
-  const w = Math.min(W - 20, ctx.measureText(text).width + 38);
-  glass((W - w) / 2, y - 17, w, 34, 17);
+  let size = W < 500 ? 12 : 14, lines = [text];
+  ctx.font = `700 ${size}px ${FONT}`;
+  const room = W - 58, full = ctx.measureText(text).width;
+  if (full > room * 1.25) {
+    // far too long for a narrow screen: break it in two at the space nearest the middle
+    let cut = -1;
+    for (let i = 0; i < text.length; i++) if (text[i] === ' ' && (cut < 0 || Math.abs(i - text.length / 2) < Math.abs(cut - text.length / 2))) cut = i;
+    if (cut > 0) lines = [text.slice(0, cut), text.slice(cut + 1)];
+  }
+  let tw = Math.max(...lines.map(l => ctx.measureText(l).width));
+  if (tw > room) { size = Math.max(9, size * room / tw); ctx.font = `700 ${size}px ${FONT}`; tw = Math.max(...lines.map(l => ctx.measureText(l).width)); }
+  const lh = size + 4, h = 34 + (lines.length - 1) * lh, w = Math.min(W - 20, tw + 38);
+  glass((W - w) / 2, y - h / 2, w, h, 17);
   ctx.fillStyle = col || '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(text, W / 2, y + 1);
+  lines.forEach((l, i) => ctx.fillText(l, W / 2, y + 1 + (i - (lines.length - 1) / 2) * lh));
 }
 
 // one weather particle (also used by the shop preview)
@@ -5488,11 +5498,14 @@ function drawTrickGauge(sx, sy) {
   const err = Math.max(Math.abs(relF), Math.abs(relS));
   const status = err <= DIFF.clean ? 0 : err <= DIFF.tol ? 1 : 2;
   const col = ['#5ad08a', '#ffd43b', '#ff5a5a'][status];
-  const w = 176, h = 124;
+  const k = Math.min(W, H) < 500 ? 0.8 : 1, w = 176, h = 124;   // a little smaller on phones so it fits beside the rider
   let x = sx + 40 * viewS + 10;
-  if (x + w > W - 8) x = sx - 40 * viewS - 10 - w;
-  x = clamp(x, 8, W - w - 8);
-  const y = clamp(sy - h / 2 - 10, 120, H - h - 60);
+  if (x + w * k > W - 8) x = sx - 40 * viewS - 10 - w * k;
+  x = clamp(x, 8, W - w * k - 8);
+  // and never up over the bars at the top of the screen
+  const y0 = clamp(sy - h * k / 2 - 10, Math.max(120, hudRows().bottom + 8), H - h * k - 60);
+  ctx.save(); ctx.translate(x, y0); ctx.scale(k, k); x = 0;
+  const y = 0;
   glass(x, y, w, h, 14);
   const tl = airTimeLeft(), urgent = tl < 0.35;
   ctx.strokeStyle = col; ctx.lineWidth = urgent ? 3 : 2;
@@ -5516,6 +5529,7 @@ function drawTrickGauge(sx, sy) {
     ctx.strokeText(gi[0].toUpperCase(), x + w / 2, y - 10); ctx.fillStyle = '#9fe7ff'; ctx.fillText(gi[0].toUpperCase(), x + w / 2, y - 10);
     ctx.textBaseline = 'alphabetic';
   }
+  ctx.restore();
 }
 
 // a frosted HUD panel: soft drop shadow, top sheen, hairline border and an optional accent edge
@@ -5539,6 +5553,17 @@ function hudLabel(t, x, y, align = 'left') {
   ctx.font = `800 9.5px ${FONT}`; ctx.textAlign = align; ctx.fillStyle = 'rgba(200,222,255,0.62)';
   if ('letterSpacing' in ctx) { ctx.letterSpacing = '1.5px'; ctx.fillText(t, x, y); ctx.letterSpacing = '0px'; } else ctx.fillText(t, x, y);
 }
+// the rows across the top of the screen; the camera keeps the rider below them (this matters on phones)
+function riderRoom() { return 90 * baseScale() + 8; }   // screen space the rider needs above its feet, flips and big air included
+function hudRows() {
+  const compact = W < 700, ph = compact ? 76 : 92, mh = 32;
+  const my = compact ? 12 + ph + 8 : 12, zy = my + mh + 7;
+  // the P-A-R-K letters sit under the zone pill when there's room (PCs and laptops),
+  // and beside it on phones and short screens, where they'd push the rider too far down
+  const park = MAP.id === 'park', lettersInline = park && (compact || zy + 50 + riderRoom() > H * 0.3);
+  return { mh, my, zy, lettersInline, bottom: park && !lettersInline ? zy + 50 : zy + 22 };
+}
+function minAnchor() { return H > 1 ? Math.min(0.5, (hudRows().bottom + riderRoom()) / H) : 0.28; }
 function drawHUD() {
   const compact = W < 700;
   const pw = compact ? 166 : 224, ph = compact ? 76 : 92;
@@ -5614,10 +5639,12 @@ function drawHUD() {
   if (P.flare > 0) timerBubble('#ff6b3d', P.flare / 8, (cx, cy) => { ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 2, cy - 3, 4, 10); ctx.fillStyle = '#ffd27a'; ell(cx, cy - 5, 3, 4); ctx.fill(); });
 
   // ---- centre: avalanche meter or mode badge, then the zone and how far to the next one
-  let mx, my, mw;
-  const mh = 32;
-  if (compact) { mx = 12; my = 12 + ph + 8; mw = W - 24; }
-  else { mw = Math.min(330, W - pw - rw - 80); mx = (W - mw) / 2; my = 12; }
+  const rows = hudRows();
+  let mx, mw;
+  const mh = rows.mh, my = rows.my;
+  // on phones the pause button sits at the right end of this row, so the bar stops short of it
+  if (compact) { mx = 12; mw = W - 24 - (isTouch ? 54 : 0); }
+  else { mw = Math.min(330, W - pw - rw - 80); mx = (W - mw) / 2; }
   glass(mx, my, mw, mh, 12);
   ctx.textBaseline = 'alphabetic';
   if (race) {
@@ -5654,7 +5681,9 @@ function drawHUD() {
   // zone pill with progress toward the next zone
   const zname = MAP.zones[zoneIdx].toUpperCase(), zc = MAP.zcols[zoneIdx];
   ctx.font = `900 11px ${FONT}`;
-  const zw = ctx.measureText(zname).width + 40, zx = W / 2 - zw / 2, zy = my + mh + 7;
+  const lettersW = WORD.length * 26 - 4, zw = ctx.measureText(zname).width + 40, zy = rows.zy;
+  // when the P-A-R-K letters share this row: on phones the pill goes left and the letters right, otherwise they share the middle
+  const zx = !rows.lettersInline ? W / 2 - zw / 2 : compact ? 12 : W / 2 - (zw + 8 + lettersW) / 2;
   glass(zx, zy, zw, 22, 11);
   ctx.fillStyle = zc === '#1b2230' ? '#e9eef6' : zc; ell(zx + 13, zy + 11, 4, 4); ctx.fill();
   ctx.textBaseline = 'middle'; hudText(zname, zx + 23, zy + 11.5, 11, '#ffffff', 900); ctx.textBaseline = 'alphabetic';
@@ -5666,9 +5695,10 @@ function drawHUD() {
   }
   // P-A-R-K letters collected so far
   if (MAP.id === 'park') {
-    const ly = zy + 28;
+    const ly = rows.lettersInline ? zy : zy + 28;
+    const lx0 = !rows.lettersInline ? W / 2 - lettersW / 2 : compact ? W - 12 - (isTouch ? 54 : 0) - lettersW : zx + zw + 8;
     for (let i = 0; i < WORD.length; i++) {
-      const lx = W / 2 - 51 + i * 26, got = i < letters;
+      const lx = lx0 + i * 26, got = i < letters;
       if (got) { const g = ctx.createLinearGradient(0, ly, 0, ly + 22); g.addColorStop(0, '#a77bff'); g.addColorStop(1, '#6a2ae0'); ctx.fillStyle = g; rr(lx, ly, 22, 22, 7); ctx.fill(); }
       else glass(lx, ly, 22, 22, 7);
       ctx.textBaseline = 'middle'; hudText(WORD[i], lx + 11, ly + 12, 13, got ? '#ffffff' : 'rgba(255,255,255,0.45)', 900, 'center'); ctx.textBaseline = 'alphabetic';
