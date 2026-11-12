@@ -10,7 +10,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 | Map | Rating | Special feature |
 |---|---|---|
 | **Pine Valley** | 🟢 Easy | Forest run with slalom gates, logs and moguls — a snowcat grooms the slope; ride its fresh corduroy for speed |
-| **Terrain Park** | 🟧 Park | A **Superpipe** to launch out of, kickers from S up to a giant **XXL**, gap jumps, long rails, kinked, down, wave & rainbow rails, tubes, boxes, picnic tables and jib lines, hoops, P-A-R-K letters and **judges' zones** (tricks ×1.5) — with a chairlift, DJ tent and cheering fans beside the course |
+| **Terrain Park** | 🟧 Park | A **Superpipe** to launch out of (ski through a purple **pipe portal** to warp straight in), kickers from S up to a giant **XXL**, a **MASSIVE** jump at the end of every section, gap jumps, extra-long rails (keep your balance with A / D for a Perfect grind), kinked, down, wave & rainbow rails, tubes, boxes, picnic tables and jib lines, hoops, P-A-R-K letters and **judges' zones** (tricks ×1.5) — with a chairlift, DJ tent and cheering fans beside the course |
 | **Glacier Pass** | 🟦 Intermediate | Slick ice, crevasses and frozen spires — **ice balls** are lobbed slowly across the slope |
 | **Deep Glades** | ◆ Advanced | Deep-powder tree skiing: thread tight gaps, escape tree wells — and dodge **snow bombs** from the trees |
 | **Midnight Woods** | ◆◆ Expert | The hardest run: **pitch black**, thick forest, rocks, logs, black ice and foxes darting across — only your headlamp and flares light the way, and they get scarcer the deeper you go |
@@ -19,7 +19,7 @@ A downhill skiing game that runs in your browser — one HTML file. You can also
 - **Avalanche** — outrun the slide; crashes cost time
 - **Free Ride** — no avalanche, crash and keep going
 - **One Life** — one crash ends the run
-- **Race** — a countdown, then head to head to a finish line 1,000 m down the hill. The race difficulty picks your rival: **Easy** is Jimmy, **Normal** is Bum, **Hard** is your twin (named You, wearing your outfit, racing at the pace Luca used to) and **Impossible** is Luca the pro. Beat Luca for his Pro Kit outfit
+- **Race** — a countdown, then head to head to a finish line 1,000 m down the hill. The race difficulty picks your rival: **Easy** is Jimmy, **Normal** is Bum (laid back, the easy-going middle), **Hard** is your twin (named You, wearing your outfit, racing at the pace Luca used to) and **Impossible** is Luca the pro, who rides right with you sending insane tricks and always wins by a hair. Nobody beats him, but finishing a race against him without crashing wins his Pro Kit outfit
 - **Easy / Normal / Pro** — Easy saves near-miss landings; Pro is strict but pays ×1.3. Avalanche and One Life on Normal or Pro pay **2×** for tricks off jumps and rails.
 
 ## Controls

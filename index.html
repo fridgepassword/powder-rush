@@ -379,7 +379,7 @@
     <div class="how keysonly">
       <div><b>On the snow</b><kbd>A</kbd> <kbd>D</kbd> steer · <kbd>S</kbd> tuck (faster) · <kbd>W</kbd> brake · <kbd>Space</kbd> jump logs, rocks &amp; crevasses</div>
       <div><b>In the air</b><kbd>←</kbd> <kbd>→</kbd> spin · <kbd>↑</kbd> front flip · <kbd>↓</kbd> back flip<br>Hold <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to grab — hold two for combo grabs (W+S Truck Driver, A+D Japan Air…)</div>
-      <div><b>Rails &amp; jibs</b>Ride on from the start end · <kbd>A</kbd> <kbd>D</kbd> keep the balance meter centred · hold <kbd>←</kbd>/<kbd>→</kbd> to slide (×1.5) · <kbd>Space</kbd> pop off</div>
+      <div><b>Rails &amp; jibs</b>Ride on from the start end · <kbd>A</kbd> <kbd>D</kbd> keep the balance meter centred (the rail keeps shoving you; stay centred for a Perfect grind, +30%) · hold <kbd>←</kbd>/<kbd>→</kbd> to slide (×1.5) · <kbd>Space</kbd> pop off</div>
       <div><b>Landing</b>Watch the trick gauge: green = clean, yellow = sketchy save, red = bail. Easy saves close calls for you.</div>
     </div>
     <div class="how touchonly">
@@ -387,10 +387,10 @@
     </div>
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
-      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL — the bigger the kicker, the more airtime. Rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. In the <b style="display:inline;letter-spacing:0">Superpipe</b>, carve up a wall to launch, trick, and land back on the same wall.</div>
-      <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear, at the pace Luca used to race) and Impossible is Luca, the pro who bombs past now and then sending impossible tricks.</div>
+      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL, and every section ends with a <b style="display:inline;letter-spacing:0">MASSIVE</b> jump. Long rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. Ski through a purple <b style="display:inline;letter-spacing:0">pipe portal</b> to warp into the <b style="display:inline;letter-spacing:0">Superpipe</b>, then carve up a wall to launch, trick, and land back on the same wall.</div>
+      <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear, at the pace Luca used to race) and Impossible is Luca, who stays right with you sending insane tricks and always wins by a hair. Finish on his tail without crashing to win his Pro Kit.</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
-      <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: beat Luca on Impossible, or nail 10 pipe airs in a run.</div>
+      <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: race Luca on Impossible without crashing, or nail 10 pipe airs in a run.</div>
     </div>
     <div class="btns"><button id="howClose" class="btn primary" type="button">Got it <kbd class="keysonly">Esc</kbd></button></div>
   </div>
@@ -488,7 +488,7 @@ const MAPS = [
   { id: 'pine', name: 'Pine Valley', rate: 0, desc: 'Forest run with gates, logs and a snowcat grooming the slope.',
     zones: ['Green Meadow', 'Blue Ridge', 'Black Diamond', 'Double Black', 'The Abyss'],
     zcols: ['#1f9d5c', '#2a72dc', '#1b2230', '#1b2230', '#7b2ff0'] },
-  { id: 'park', name: 'Terrain Park', rate: 4, desc: 'Kickers up to XXL, long rails, jibs and judges scoring your tricks.',
+  { id: 'park', name: 'Terrain Park', rate: 4, desc: 'MASSIVE jumps, extra-long rails, pipe portals and judges scoring your tricks.',
     zones: ['Warm-up Line', 'Medium Line', 'Pro Line', 'Big Air Line', 'Mega Line'],
     zcols: ['#2b8cff', '#ff8a1f', '#e5333b', '#e5333b', '#7b2ff0'] },
   { id: 'glacier', name: 'Glacier Pass', rate: 1, desc: 'Slick ice, crevasses, and ice balls lobbed across the slope.',
@@ -537,6 +537,7 @@ const KICK = {
   l:    { w: 154, h: 110, lipH: 21, mul: 1.85, col: '#e5333b', tag: 'L' },
   xl:   { w: 192, h: 142, lipH: 29, mul: 2.3, col: '#7b2ff0', tag: 'XL' },
   mega: { w: 236, h: 184, lipH: 38, mul: 2.75, col: '#ff3fa4', tag: 'XXL' },
+  massive: { w: 300, h: 240, lipH: 48, mul: 3.4, col: '#ff8a1f', tag: 'MASSIVE' },   // closes out each park section
 };
 const BOX_COLS = ['#7b5cff', '#18b5a4', '#ff5d8f', '#ffb020', '#2b8cff'];
 
@@ -581,7 +582,7 @@ const SUITS = [
   { id: 'retro', name: 'Retro 80s', price: 900, jacket: '#16c2d5', sleeve: '#ff4fa3', accent: '#ffe14d', pants: '#5b2fc0', helmet: '#ff4fa3', lens: '#ffe14d' },
   { id: 'galaxy', name: 'Galaxy', price: 1200, jacket: '#2a1b5e', sleeve: '#1f1548', accent: '#7fe3ff', pants: '#120c2e', helmet: '#c86bff', lens: '#7fe3ff' },
   { id: 'chroma', name: 'Chroma Shift', price: 2200, anim: 'chroma', jacket: '#ff3f6f', sleeve: '#e02b5c', accent: '#ffffff', pants: '#1b1f29', helmet: '#ffffff', lens: '#1b1f29' },
-  { id: 'luca', name: "Luca's Pro Kit", price: 0, req: 'lucaWin', reqText: 'Beat Luca in a race (Impossible)', jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f' },
+  { id: 'luca', name: "Luca's Pro Kit", price: 0, req: 'lucaWin', reqText: 'Race Luca (Impossible) without crashing', jacket: '#141a26', sleeve: '#232b3c', accent: '#ffd43b', pants: '#c0242c', helmet: '#ffd43b', lens: '#ff4d4f' },
 ];
 const SKIS = [
   { id: 'red', name: 'Race Red', price: 0, col: '#ef3b3f' },
@@ -686,7 +687,7 @@ const MISSION_POOL = [
   { id: 'overtake3', text: 'Overtake 3 rival skiers', stat: 'overtakes', n: 3, reward: 80 },
   { id: 'luca', text: 'Overtake Luca the pro', stat: 'lucaPasses', n: 1, reward: 150 },
   { id: 'raceWin', text: 'Win a race against any rival', stat: 'raceWins', n: 1, reward: 120 },
-  { id: 'raceLuca', text: 'Beat Luca in a race (Impossible)', stat: 'lucaWins', n: 1, reward: 400 },
+  { id: 'raceLuca', text: 'Race Luca (Impossible) without crashing', stat: 'lucaClean', n: 1, reward: 400 },
   { id: 'pipe5', text: 'Land 5 airs in the halfpipe', stat: 'pipeAirs', n: 5, reward: 110 },
   { id: 'close5', text: 'Get 5 close calls in one run', stat: 'closeCalls', n: 5, reward: 70 },
   { id: 'gap2', text: 'Clear 2 gap jumps', stat: 'gaps', n: 2, reward: 90 },
@@ -1413,7 +1414,7 @@ function reset() {
   race = MODE.id === 'race' ? { cd: 3.4, beep: 4, t0: 0, lucaFin: null, youFin: null, lucaEst: null, racer: RACERS[raceLvl] } : null;
   if (race) npcs.push(newLuca(70, 6, 0, race.racer));   // side by side in the start gate
   resetBuddy();
-  pipes = []; pipeNext = 900;
+  pipes = []; pipeNext = 900; massiveIdx = 0; massiveEnd = -1e9; portalNext = 1500; warp = null;
   runCoins = 0; settled = false;
   objs = []; pending = []; gReserved = []; gSolids = [];
   genY = -800;
@@ -1426,7 +1427,7 @@ function reset() {
   particles = []; popups = []; tracks = []; curStroke = null;
   shake = 0; zoneIdx = 0; banner = null; overT = 0; hintT = 8; tip = null; newBest = false;
   stats = { gates: 0, flakes: 0, crashes: 0, tricks: 0, grinds: 0, hoops: 0, words: 0, saves: 0, bestTrick: '—', bestTrickPts: 0, maxSpeed: 0,
-    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, raceWins: 0, lucaWins: 0, pipeAirs: 0, closeCalls: 0, gaps: 0, threads: 0, maxTurns: 0, logRides: 0, wells: 0 };
+    backflips: 0, frontflips: 0, maxSpins: 0, maxCats: 0, maxMult: 1, powerups: 0, snowmen: 0, overtakes: 0, lucaPasses: 0, raceWins: 0, lucaClean: 0, pipeAirs: 0, closeCalls: 0, gaps: 0, threads: 0, maxTurns: 0, logRides: 0, wells: 0 };
   camX = 0; camY = 0; anchor = Math.max(0.28, minAnchor()); viewS = targetScale();
   ensureGen();
 }
@@ -1674,12 +1675,13 @@ const JIB = {
   table:   { h: 18, tol: 22, n: ['Table Ride', 'Table Slide'], base: 110, rate: 470 },
 };
 // height of a jib's grind surface at distance t along it
+const waveN = o => Math.max(2, Math.round(o.len / 220));   // a long wave rail gets more humps
 function railH(o, t) {
   const u = clamp(t / o.len, 0, 1);
   if (o.kind === 'rainbow') return o.h + 24 * Math.sin(Math.PI * u);
   if (o.kind === 'kink') return u < 0.4 ? o.h + 12 : o.h + 12 - 16 * (u - 0.4) / 0.6;
   if (o.kind === 'down') return u < 0.3 ? o.h + 22 : u < 0.7 ? o.h + 22 - 22 * (u - 0.3) / 0.4 : o.h;
-  if (o.kind === 'wave') return o.h + 9 * (1 - Math.cos(u * TAU * 2));
+  if (o.kind === 'wave') return o.h + 9 * (1 - Math.cos(u * TAU * waveN(o)));
   return o.h;
 }
 function weighted(opts) {
@@ -1785,9 +1787,15 @@ function genForest(G, night) {
 }
 function genPark(G) {
   const d = G.d;
-  // now and then the superpipe takes over the middle of the park
+  // the MASSIVE jump at the end of each section takes the middle of the park; its lane is held clear well ahead
+  let my = massiveY(massiveIdx);
+  while (my - 330 < G.y0) my = massiveY(++massiveIdx);
+  if (my - 330 < G.y1) { addMassive(G, my); my = massiveY(++massiveIdx); }
+  const massiveSoon = my - 330 < G.y1 + 3000, massiveOn = massiveEnd > G.y0;
+  if (massiveSoon) for (let y = G.y0; y < G.y1; y += 140) gReserved.push({ x: 0, y, r: 270, hold: true });
+  // now and then the superpipe takes over the middle of the park (never where a massive jump lands)
   // (for a while beforehand the middle of the park is held clear so there is room for it)
-  if (G.y0 >= pipeNext && addPipe(G)) pipeNext = G.y0 + rand(3800, 6200);
+  if (G.y0 >= pipeNext && !massiveOn && my - 330 - G.y0 > 3300 && addPipe(G)) pipeNext = G.y0 + rand(3000, 4800);
   const pipeSoon = G.y0 >= pipeNext - 2600;
   if (pipeSoon) for (let y = G.y0; y < G.y1; y += 140) gReserved.push({ x: 0, y, r: PIPE_HALF + 70, hold: true });
   // judges' zone: tricks landed inside score ×1.5
@@ -1795,7 +1803,19 @@ function genPark(G) {
     G.out.push({ t: 'judges', x: COURSE_HALF - 70, y: G.y0 + 20, h: 760, cards: null, cardsT: -9 });
     judgeNext = G.y0 + 1800;
   }
-  const lanes = (pipeSoon || pipeAt(0, G.y0) || pipeAt(0, G.y1) ? [-540, 540] : [-540, -180, 180, 540]).map(x => x + rand(-50, 50)).sort(() => Math.random() - 0.5);
+  const middleBusy = pipeSoon || massiveSoon || massiveOn || pipeAt(0, G.y0) || pipeAt(0, G.y1);
+  const lanes = (middleBusy ? [-540, 540] : [-540, -180, 180, 540]).map(x => x + rand(-50, 50)).sort(() => Math.random() - 0.5);
+  // pipe portals in the run-up to each superpipe: ski through one to warp straight into it (not in races: no shortcuts)
+  // (only when that pipe can't get pushed back behind a massive jump, so the warp is always a short one)
+  if (!race && G.y0 >= portalNext && pipeSoon && !massiveOn && my - 330 - Math.max(pipeNext, G.y0) > 3800 && !pipeAt(0, G.y0) && !pipeAt(0, G.y1)) {
+    const x = lanes[lanes.length - 1], y = rand(G.y0 + 120, G.y1 - 140), cs = [[x, y - 120, 60], [x, y, 84], [x, y + 140, 70]];
+    if (cs.every(([cx, cy, r]) => okSpot(cx, cy, r, 10))) {
+      G.out.push({ t: 'portal', x, y, w: 116, used: false, ph: rand(0, TAU) });
+      for (const [cx, cy, r] of cs) addReserve(cx, cy, r);
+      lanes.pop();
+      portalNext = G.y0 + rand(900, 1400);
+    }
+  }
   const nFeat = Math.min(lanes.length, chance(0.4 + d * 0.4) ? 4 : 3);
   G.wantLetter = chance(0.4);
   const opts = [
@@ -1811,20 +1831,21 @@ function genPark(G) {
       case 'gap': addGapJump(G, x, y); break;
       case 'xl': addRamp(G, KICK.xl, x, y); break;
       case 'mega': addRamp(G, KICK.mega, x, y); break;
-      case 'rail': addRail(G, 'rail', x, y, rand(240, 380 + 140 * d), tilt(0.16)); break;
-      case 'kink': addRail(G, 'kink', x, y, rand(280, 420), tilt(0.1)); break;
-      case 'rainbow': addRail(G, 'rainbow', x, y, rand(220, 320), tilt(0.08)); break;
-      case 'tube': addRail(G, 'tube', x, y, rand(200, 340), tilt(0.12)); break;
-      case 'down': addRail(G, 'down', x, y, rand(300, 440), tilt(0.08)); break;
-      case 'wave': addRail(G, 'wave', x, y, rand(300, 460), tilt(0.08)); break;
-      case 'table': addRail(G, 'table', x, y, rand(110, 150), tilt(0.1)); break;
+      // long rails: the longer you stay on (and balanced), the more they pay
+      case 'rail': addRail(G, 'rail', x, y, rand(420, 620 + 200 * d), tilt(0.08)); break;
+      case 'kink': addRail(G, 'kink', x, y, rand(460, 680), tilt(0.06)); break;
+      case 'rainbow': addRail(G, 'rainbow', x, y, rand(340, 480), tilt(0.05)); break;
+      case 'tube': addRail(G, 'tube', x, y, rand(360, 560), tilt(0.07)); break;
+      case 'down': addRail(G, 'down', x, y, rand(480, 700), tilt(0.05)); break;
+      case 'wave': addRail(G, 'wave', x, y, rand(480, 720), tilt(0.05)); break;
+      case 'table': addRail(G, 'table', x, y, rand(150, 210), tilt(0.08)); break;
       case 'jibs': {
         // a jib line: two features back to back in the same lane
-        const a = addRail(G, pick(['box', 'tube', 'table', 'rail']), x, y, rand(160, 240), 0);
-        if (a) addRail(G, pick(['rail', 'kink', 'down', 'wave', 'rainbow']), a.x2, a.y2 + 350, rand(260, 380), tilt(0.06));
+        const a = addRail(G, pick(['box', 'tube', 'table', 'rail']), x, y, rand(260, 380), 0);
+        if (a) addRail(G, pick(['rail', 'kink', 'down', 'wave', 'rainbow']), a.x2, a.y2 + 350, rand(420, 620), tilt(0.04));
         break;
       }
-      default: addRail(G, 'box', x, y, rand(200, 360), tilt(0.12));
+      default: addRail(G, 'box', x, y, rand(340, 560), tilt(0.07));
     }
   }
   if (G.wantLetter) {
@@ -1914,7 +1935,7 @@ function genGlade(G) {
 // trick, and land back on the same wall; each air sends you across to the other side.
 const PIPE = { a: 74, tw: 68, H: 68, deck: 28, slope: 62 };   // half floor width, transition, wall height, deck, outer slope
 const PIPE_HALF = PIPE.a + PIPE.tw + PIPE.deck + PIPE.slope;
-let pipes = [], pipeNext = 900;
+let pipes = [], pipeNext = 900, massiveIdx = 0, massiveEnd = -1e9, portalNext = 1500, warp = null;
 // the walls rise from nothing at the drop-in and sink back down at the bottom
 const pipeEnd = (p, y) => clamp(Math.min((y - p.y0) / 90, (p.y1 - y) / 70), 0, 1);
 function pipeZ(p, dx, y) {
@@ -1943,6 +1964,127 @@ function addPipe(G) {
   }
   return true;
 }
+// ---- the MASSIVE jump that closes out each section of the park, set so you land right around the start of the
+// next zone (past the last zone, one every 900 m). For a while beforehand its whole lane is held clear.
+const massiveY = k => (k < ZONE_M.length - 1 ? ZONE_M[k + 1] : ZONE_M[ZONE_M.length - 1] + 900 * (k - ZONE_M.length + 2)) * PX_PER_M - 1700;
+function addMassive(G, y) {
+  const spec = KICK.massive;
+  addRamp(G, spec, 0, y, true);
+  G.out.push({ t: 'massign', x: 0, y: y - spec.h / 2 - 60 });
+  massiveEnd = y + spec.h / 2 + 2700;
+}
+// ---- pipe portals: ski through one and you're swept straight into the next superpipe
+const WARP_IN = 0.32, WARP_OUT = 0.6;
+function pipeAhead() {
+  const find = () => pipes.find(p => p.y0 > P.y + 150);
+  let p = find();
+  if (!p) {
+    pipeNext = Math.min(pipeNext, genY);   // bring the next superpipe forward so the portal has somewhere to go
+    for (let k = 0; k < 12 && !p; k++) { generateBand(genY); genY += BAND; p = find(); }
+  }
+  return p;
+}
+function startWarp(o) {
+  o.used = true;
+  warp = { t: 0, moved: false, x: o.x, y: o.y };
+  P.invuln = Math.max(P.invuln, WARP_IN + 0.6);
+  tone(330, 0.45, 'sine', 0.07, 990); tone(660, 0.4, 'triangle', 0.05, 1320, 0.08);
+  ring(o.x, o.y, '#b28cff', 110); sparkle(o.x, o.y, 50);
+}
+function updateWarp(dt) {
+  if (!warp) return;
+  warp.t += dt;
+  if (!warp.moved && warp.t >= WARP_IN) {
+    // the screen is all swirl now: move the rider to the drop-in of the superpipe
+    warp.moved = true;
+    const p = pipeAhead();
+    if (!p) { popup('The portal fizzled out!', '#d6b8ff'); return; }
+    P.x = P.px = p.x; P.y = P.py = p.y0 + 40;
+    P.ang = P.mAng = 0; P.speed = Math.max(P.speed, 480);
+    P.air = 0; P.z = 0; P.vz = 0; P.gz = 0; P.grind = null; P.pipeAir = null; P.stuck = 0;
+    resetTricks();
+    P.invuln = Math.max(P.invuln, 0.8);
+    camX = P.x;
+    endStroke(); startStroke(); resetBuddy();
+    stats.warps = (stats.warps || 0) + 1;
+    ring(P.x, P.y, '#b28cff', 130); sparkle(P.x, P.y, 20);
+    popup('Warped into the Superpipe!', '#d6b8ff', true);
+    tone(990, 0.3, 'triangle', 0.06, 495);
+  }
+  if (warp.t >= WARP_IN + WARP_OUT) warp = null;
+}
+// the swirl that covers the jump: builds up as you go through the portal, then clears to show the pipe
+function drawWarp() {
+  if (!warp) return;
+  const t = warp.t, k = t < WARP_IN ? t / WARP_IN : 1 - (t - WARP_IN) / WARP_OUT, a = clamp(k * k * (3 - 2 * k), 0, 1);
+  if (a <= 0) return;
+  const cx = W / 2, cy = H * anchor, R = Math.hypot(W, H);
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
+  g.addColorStop(0, `rgba(255,255,255,${a})`);
+  g.addColorStop(0.3, `rgba(222,200,255,${a * 0.96})`);
+  g.addColorStop(0.7, `rgba(138,92,255,${a * 0.92})`);
+  g.addColorStop(1, `rgba(52,22,150,${a * 0.9})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 18; i++) {
+    // spiral streaks pulled in toward the middle
+    const ang = i / 18 * TAU + time * 5, r0 = 40 + (i % 4) * 0.12 * R, len = 0.9 + (i % 3) * 0.3;
+    ctx.strokeStyle = `rgba(255,255,255,${a * (0.35 + (i % 3) * 0.15)})`; ctx.lineWidth = 2 + (i % 3);
+    ctx.beginPath(); ctx.arc(cx, cy, r0 * (1.2 - 0.5 * a), ang, ang + len); ctx.stroke();
+  }
+}
+// an upright ring with a purple vortex spinning inside it; the sign says where it goes
+function drawPortal(o) {
+  const x = o.x, base = o.y, R = o.w / 2, cy = base - R - 8, t = time * 2.4 + o.ph;
+  ctx.fillStyle = 'rgba(62,92,150,0.22)';
+  ctx.beginPath(); ctx.ellipse(x + R * 0.55, base + 4, R + 12, 7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(150,110,255,0.22)'; ell(x, base + 1, R * 0.8, 6); ctx.fill();
+  const halo = ctx.createRadialGradient(x, cy, R * 0.7, x, cy, R * 1.55);
+  halo.addColorStop(0, 'rgba(178,140,255,0.42)'); halo.addColorStop(1, 'rgba(178,140,255,0)');
+  ctx.fillStyle = halo; ell(x, cy, R * 1.55, R * 1.55); ctx.fill();
+  ctx.save();
+  ell(x, cy, R - 4, R - 4); ctx.clip();
+  const g = ctx.createRadialGradient(x, cy, 2, x, cy, R);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.22, '#eadcff'); g.addColorStop(0.6, '#8a5cff'); g.addColorStop(1, '#2e1386');
+  ctx.fillStyle = g; ctx.fillRect(x - R, cy - R, 2 * R, 2 * R);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    ctx.strokeStyle = i % 2 ? 'rgba(255,255,255,0.55)' : 'rgba(214,184,255,0.7)'; ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    for (let s = 0; s <= 18; s++) {
+      const u = s / 18, an = -t + i * TAU / 5 + u * 3.4, r = 3 + u * (R - 6);
+      const px = x + Math.cos(an) * r, py = cy + Math.sin(an) * r;
+      if (s) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  // the ring and its two feet
+  ctx.fillStyle = '#2b2f3a';
+  for (const s of [-1, 1]) { rr(x + s * R * 0.62 - 8, base - 12, 16, 12, 3); ctx.fill(); }
+  ctx.fillStyle = '#ffffff'; for (const s of [-1, 1]) { ell(x + s * R * 0.62, base + 0.5, 11, 3); ctx.fill(); }
+  ctx.lineWidth = 10; ctx.strokeStyle = '#3d1799'; ell(x, cy, R, R); ctx.stroke();
+  ctx.lineWidth = 6; ctx.strokeStyle = '#a77bff'; ell(x, cy, R, R); ctx.stroke();
+  ctx.lineWidth = 1.8; ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(x, cy, R - 1.5, Math.PI * 1.02, Math.PI * 1.62); ctx.stroke();
+  // lights chasing round the rim
+  for (let i = 0; i < 8; i++) {
+    const an = i / 8 * TAU + time * 1.6, on = (i + Math.floor(time * 6)) % 2;
+    ctx.fillStyle = on ? '#ffffff' : '#d6b8ff'; ell(x + Math.cos(an) * R, cy + Math.sin(an) * R, 2.4, 2.4); ctx.fill();
+  }
+  // sign on top: a little halfpipe glyph and where it takes you
+  const sy = cy - R - 22;
+  ctx.font = `900 12px ${FONT}`;
+  const label = 'TO THE PIPE', bw = ctx.measureText(label).width + 36;
+  ctx.fillStyle = 'rgba(20,30,50,0.3)'; rr(x - bw / 2 + 2, sy - 11 + 2, bw, 22, 7); ctx.fill();
+  ctx.fillStyle = '#ffffff'; rr(x - bw / 2, sy - 11, bw, 22, 7); ctx.fill();
+  ctx.strokeStyle = '#7b2ff0'; ctx.lineWidth = 2; rr(x - bw / 2 + 2.5, sy - 8.5, bw - 5, 17, 5); ctx.stroke();
+  ctx.strokeStyle = '#7b2ff0'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - bw / 2 + 9, sy - 4); ctx.quadraticCurveTo(x - bw / 2 + 9, sy + 4, x - bw / 2 + 15, sy + 4); ctx.quadraticCurveTo(x - bw / 2 + 21, sy + 4, x - bw / 2 + 21, sy - 4); ctx.stroke();
+  ctx.fillStyle = '#5a1fd0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + 8, sy + 0.5);
+}
+function drawMassiveSign(o) { drawArch(o.x, o.y, 252, 158, '#ff8a1f', 'MASSIVE AIR'); }   // wide enough to clear the size sign
 // called every step: ride the walls, launch off the coping, hold the wall height while airborne
 function stepPipe(dt) {
   if (P.grind || P.crashT > 0 || P.stuck > 0) { P.pipe = null; P.pipeAir = null; return; }
@@ -2186,7 +2328,8 @@ function evalAir() {
   const spins = Math.min(4, Math.round(Math.abs(P.spinTotal) / TAU));
   const flips = Math.min(3, Math.round(Math.abs(P.flipTotal) / TAU));
   const back = P.flipTotal < 0;
-  const grabs = Object.entries(P.grabs).filter(([, g]) => g.t >= 0.2).sort((a, b) => b[1].t - a[1].t).slice(0, 3);
+  // a hop off the flat (Space) is just a hop: grabbing during one scores nothing, or spamming it would farm points
+  const grabs = P.air === 1 ? [] : Object.entries(P.grabs).filter(([, g]) => g.t >= 0.2).sort((a, b) => b[1].t - a[1].t).slice(0, 3);
   let pts = P.air === 2 ? Math.round(80 + 150 * P.airDur) : P.air === 3 ? 40 : 0;
   const parts = [];
   if (spins) { parts.push(['', '360', '720', '1080', '1440'][spins]); pts += [0, 400, 1200, 2500, 4500][spins]; }
@@ -2250,7 +2393,7 @@ function startGrind(o, t) {
     resetTricks();
   }
   P.air = 0; P.vz = 0; P.gapEnd = 0;
-  P.grind = { o, t: clamp(t, 0, o.len), bal: rand(-0.12, 0.12), drift: rand(-0.5, 0.5), time: 0, slideT: 0, slide: false };
+  P.grind = { o, t: clamp(t, 0, o.len), bal: rand(-0.12, 0.12), drift: rand(-0.5, 0.5), time: 0, slideT: 0, slide: false, gust: rand(0.35, 0.7), good: 0 };
   P.z = railH(o, P.grind.t);
   P.ang = P.mAng = o.a;
   P.speed = clamp(P.speed, 240, 380);
@@ -2262,7 +2405,10 @@ function grindResult(G) {
   let pts = Math.round(J.base + G.time * J.rate);
   const slide = G.slideT > G.time * 0.5;
   if (slide) pts = Math.round(pts * 1.5);
-  return { pts, name: J.n[slide ? 1 : 0] };
+  // staying centred (the balance marker in the green) for most of a long ride is a Perfect grind, worth 30% more
+  const perfect = G.time > 0.8 && G.good > G.time * 0.75;
+  if (perfect) pts = Math.round(pts * 1.3);
+  return { pts, name: (perfect ? 'Perfect ' : '') + J.n[slide ? 1 : 0] };
 }
 function endGrind(T) {
   const G = P.grind, o = G.o;
@@ -2293,9 +2439,12 @@ function stepGrind(dt, inp) {
   G.time += dt;
   P.speed = Math.max(200, P.speed - 50 * dt);
   G.t += P.speed * dt;
-  G.drift = clamp(G.drift + rand(-1, 1) * dt * 4, -1, 1);
+  G.drift = clamp(G.drift + rand(-1, 1) * dt * 5, -1, 1);
+  // every so often the rail kicks you one way or the other: keep working A / D (left / right) to stay on
+  if ((G.gust -= dt) <= 0) { G.gust = rand(0.6, 1.2); G.drift = clamp(G.drift + rand(0.4, 0.8) * (chance(0.5) ? 1 : -1), -1, 1); }
   const steer = (inp.steerR ? 1 : 0) - (inp.steerL ? 1 : 0);
-  G.bal += (G.drift * 0.8 + G.bal * (1.2 + G.time * 0.5)) * dt * DIFF.bal + steer * 2.8 * dt;
+  G.bal += (G.drift + G.bal * (1.1 + Math.min(G.time, 2.5) * 0.35)) * dt * DIFF.bal + steer * 3 * dt;
+  if (Math.abs(G.bal) < 0.3) G.good += dt;
   G.slide = inp.spinL || inp.spinR;
   if (G.slide) G.slideT += dt;
   P.turn = G.bal;
@@ -2462,7 +2611,8 @@ function updateRivals(dt) {
       updateLuca(n, dt);
       const rel = Math.sign(P.y - n.y) || n.rel;
       if (n.rel > 0 && rel < 0 && !n.passed && Math.abs(P.x - n.x) < 420) { n.passed = true; n.trickCD = Math.min(n.trickCD, rand(0.7, 1.3)); popup(`${n.name}: ${pick(n.racer.lines)}`, n.racer.col, false, n.x, n.y - n.z - 40); }
-      if (n.rel < 0 && rel > 0 && Math.abs(P.x - n.x) < 220 && P.crashT <= 0) { if (n.racer.id === 'luca') stats.lucaPasses++; addPoints(n.racer.id === 'luca' ? 300 : 120, `You passed ${n.racer.id === 'you' ? 'your twin' : n.name}!`, n.racer.col, true); bumpCombo(2); }
+      // passing pays once every few seconds, so swapping places back and forth can't farm points
+      if (n.rel < 0 && rel > 0 && Math.abs(P.x - n.x) < 220 && P.crashT <= 0 && time - (n.passT ?? -99) > 6 && (n.passT = time, true)) { if (n.racer.id === 'luca') stats.lucaPasses++; addPoints(n.racer.id === 'luca' ? 300 : 120, `You passed ${n.racer.id === 'you' ? 'your twin' : n.name}!`, n.racer.col, true); bumpCombo(2); }
       n.rel = rel;
       continue;
     }
@@ -2507,8 +2657,8 @@ const RACERS = [
     suit: () => Object.assign(makeSuit('classic', 'red', 'guy', '#c2452d'), {
       jacket: '#ff8a1f', sleeve: '#e0700f', accent: '#ffffff', glove: '#ffffff', pants: '#3a5ba8', helmet: '#ffffff', lens: '#6fd0ff',
       trim: '#a8520a', visor: '#a8acb2', pack: '#4a6bb8' }) },
-  { id: 'bum', name: 'Bum', level: 'Normal', speed: 565, reward: 100, col: '#7fd3ff',
-    flips: [1, 1, 2], spins: [0, 1, 2], flat: 0.35, desc: 'Lives in his van by the lift. Quicker than he looks.',
+  { id: 'bum', name: 'Bum', level: 'Normal', speed: 520, reward: 100, col: '#7fd3ff',
+    flips: [1, 1, 2], spins: [0, 1, 2], flat: 0.35, desc: 'Lives in his van by the lift. Laid back, but he can ski.',
     lines: ['"Duuude, nice line!"', '"Powder day, brah!"', '"See ya at the van!"'],
     suit: () => makeSuit('retro', 'black', 'guy', '#8a4b24') },
   { id: 'you', name: 'You', level: 'Hard', speed: 600, reward: 150, col: '#ff8f8f',   // the pace Luca raced at before the rivals came along
@@ -2516,7 +2666,7 @@ const RACERS = [
     lines: ['"Hey, nice outfit."', '"Catch me if you can. Me."', '"Wait, which one of us is real?"'],
     suit: () => makeSuit(SAVE.suit, SAVE.ski, SAVE.rider, HAIRS[0]) },
   { id: 'luca', name: 'Luca', level: 'Impossible', speed: 730, reward: 300, col: '#ffd43b',
-    flips: null, spins: null, flat: 1, desc: 'The pro. Five back flips off the smallest kicker. Good luck.',
+    flips: null, spins: null, flat: 1, desc: 'Rides right with you sending insane tricks, and always wins by a hair.',
     lines: LUCA_LINES, suit: lucaSuit },
 ];
 // what to call a rival on screen ("YOU" would be confusing next to you)
@@ -2582,12 +2732,25 @@ function lucaJump(n, o) {
   const name = [LUCA_FLIPS[flips], ['', '360', '720', '1080', '1440'][spins], grab ? LUCA_GRABS[grab] : ''].filter(Boolean).join(' ');
   lucaLaunch(n, { H: 150 + 60 * o.mul + flips * 8, T: 1.55 + 0.3 * o.mul + flips * 0.04, flips, spins, grab, z0: o.lipH, name });
 }
-// race pace: set by difficulty, nudged so the race stays close; he coasts to a stop after the line
+// race pace: set by difficulty, nudged so the race stays close; they coast to a stop after the line
 function lucaRaceSpeed(n) {
   if (n.y > RACE_Y + 120) return 0;
   const R = n.racer, lead = n.y - P.y;
-  if (R.id === 'luca') return R.speed - (lead > 1400 ? 40 : 0);   // impossible means impossible
   return R.speed + (lead > 700 ? -55 : lead < -250 ? 55 : 0);   // eases off when well ahead, pushes when you pull away (as Luca's old race did)
+}
+// Impossible: Luca rides your pace, a few metres ahead or right alongside you, throwing tricks the whole way,
+// waits if you crash, and on the final stretch always edges clear to take it by a fraction of a second
+function lucaShadow(n, dt) {
+  const v = clamp((P.y - (race.py ?? P.y)) / Math.max(dt, 1e-3), 0, 2400);
+  race.py = P.y;
+  race.pv = (race.pv || 0) + (v - (race.pv || 0)) * Math.min(1, dt * 3);   // how fast you're really heading downhill
+  if (n.y > RACE_Y + 120) { n.speed = Math.max(0, n.speed - 900 * dt); return; }
+  const left = RACE_Y - P.y, lead = n.y - P.y;
+  let want = 110 + 90 * Math.sin(time * 0.33 + n.ph);                    // 1 to 8 m ahead, drifting back and forth
+  if (left < 3000) want = Math.max(want, 60 + race.pv * 0.4);             // the last 120 m: just enough of a gap to win
+  let sp = Math.max(0, race.pv + (want - lead) * (lead < want ? 2.2 : 1.3)) / Math.max(0.55, Math.cos(n.ang));   // catches up hard, eases off gently
+  if (left < 1500 && n.y < RACE_Y) sp = Math.max(sp, 180);                // never stalls short of the line
+  n.speed += (clamp(sp, 0, 2600) - n.speed) * Math.min(1, dt * 5);
 }
 function lucaLanded(n, A) {
   puff(n.x, n.y, 14);
@@ -2599,6 +2762,8 @@ function lucaLanded(n, A) {
   }
 }
 function updateLuca(n, dt) {
+  const crazy = race && n.racer.id === 'luca';   // Impossible
+  if (crazy) lucaShadow(n, dt);
   if (n.air) {
     // a huge floaty arc, with the flips and spins timed to finish just as he touches down
     const A = n.air; A.t += dt;
@@ -2626,8 +2791,9 @@ function updateLuca(n, dt) {
   const tgt = lucaTarget(n);
   if (n.trickCD <= 0 && !chance(n.racer.flat)) n.trickCD = rand(2.6, 4.2);   // not everyone does tricks off flat ground
   if (n.trickCD <= 0 && (!tgt || tgt[1] - n.y > 520)) {
-    n.trickCD = rand(2.6, 4.2);
-    const flips = n.racer.id === 'luca' ? randi(2, 4) : n.racer.id === 'you' ? randi(1, 2) : 1, spins = pick([0, 1, 2]), grab = pick([null, 'side', 'nose']);
+    n.trickCD = crazy ? rand(1.2, 2.2) : rand(2.6, 4.2);   // racing you on Impossible he barely touches the snow
+    const flips = crazy ? randi(3, 5) : n.racer.id === 'luca' ? randi(2, 4) : n.racer.id === 'you' ? randi(1, 2) : 1;
+    const spins = crazy ? pick([1, 2, 2]) : pick([0, 1, 2]), grab = pick([null, 'side', 'nose']);
     lucaLaunch(n, { H: 105 + flips * 16, T: 1.1 + flips * 0.13, flips, spins, grab, z0: 0, name: [LUCA_FLIPS[flips], ['', '360', '720'][spins], grab ? LUCA_GRABS[grab] : '', 'off flat ground'].filter(Boolean).join(' ') });
     return;
   }
@@ -2639,7 +2805,7 @@ function updateLuca(n, dt) {
   if (Math.abs(n.x) > COURSE_HALF - 80) want = -Math.sign(n.x) * 0.6;
   const turn = clamp(want - n.ang, -3.2 * dt, 3.2 * dt);
   n.ang += turn; n.turn = turn / dt / 3.2;
-  n.speed += ((race ? lucaRaceSpeed(n) : clamp(P.speed + 150, 560, 820)) - n.speed) * Math.min(1, dt * 1.2);
+  if (!crazy) n.speed += ((race ? lucaRaceSpeed(n) : clamp(P.speed + 150, 560, 820)) - n.speed) * Math.min(1, dt * 1.2);
   const px = n.x, py = n.y;
   n.x = clamp(n.x + Math.sin(n.ang) * n.speed * dt, -COURSE_HALF + 30, COURSE_HALF - 30);
   n.y += Math.cos(n.ang) * n.speed * dt;
@@ -2672,7 +2838,7 @@ function settleRun() {
   if (settled) return null;
   settled = true;
   const done = runMissions.filter(r => r.done);
-  const res = { flakes: stats.flakes, scoreBonus: Math.floor(score / 250), missions: done.reduce((a, r) => a + r.m.reward, 0), done, race: race && race.win ? race.racer.reward : 0 };
+  const res = { flakes: stats.flakes, scoreBonus: Math.floor(score / 250), missions: done.reduce((a, r) => a + r.m.reward, 0), done, race: race && (race.win || race.clean) ? race.racer.reward : 0 };
   res.total = res.flakes + res.scoreBonus + res.missions + res.race;
   SAVE.coins += res.total; SAVE.runs++;
   SAVE.missions = SAVE.missions.filter(id => !done.some(r => r.m.id === id));
@@ -2793,7 +2959,7 @@ function stepAir(dt, inp) {
 
 function collide() {
   P.onIce = false; P.onMogul = false; P.onCord = false;
-  const lo = lowerBound(P.y - 620);   // far enough back to cover the longest rails
+  const lo = lowerBound(P.y - 1000);   // far enough back to cover the longest rails
   const ground = P.z < 4;
   for (let i = lo; i < objs.length; i++) {
     const o = objs[i];
@@ -2840,6 +3006,10 @@ function collide() {
         break;
       case 'ice':
         if (ground && (dx / o.rx) ** 2 + (dy / o.ry) ** 2 < 1) P.onIce = true;
+        break;
+      case 'portal':
+        // a pipe portal: go through the ring and you're swept off to the next superpipe
+        if (!o.used && !warp && P.crashT <= 0 && P.z < 40 && P.py < o.y && P.y >= o.y && Math.abs(dx) < o.w / 2 + 4) startWarp(o);
         break;
       case 'ramp': {
         const top = o.y - o.h / 2, lip = o.y + o.h / 2;
@@ -2982,6 +3152,8 @@ const TIPS = {
   rail: ['Rail! Ride on from the start, balance with A / D, hold ← or → to slide', 'Rail! Ride on from the start and balance with left / right'],
   gap: ['Gap jump! Hit it with speed (hold S) or you will come up short', 'Gap jump! Hit it with speed or you will come up short'],
   hoop: ['Hoop! Fly through it off the kicker for bonus points', 'Hoop! Fly through it off the kicker for bonus points'],
+  portal: ['Halfpipe portal! Ski through the ring to warp straight into the superpipe', 'Halfpipe portal! Ski through the ring to warp straight into the superpipe'],
+  massive: ['MASSIVE jump ahead! Tuck (hold S) for speed and send it', 'MASSIVE jump ahead! Hold both sides to tuck for speed and send it'],
   pipe: ['Superpipe! Carve up a wall to launch, trick in the air and land back on the same wall', 'Superpipe! Carve up a wall to launch, trick, and land back on the wall'],
   letter: ['Grab the letter bubbles to spell P-A-R-K for a 2,000 point bonus', 'Grab the letter bubbles to spell P-A-R-K for a 2,000 point bonus'],
   hop: ['Press SPACE to jump over logs and rocks', 'Swipe up to jump over logs and rocks'],
@@ -2998,7 +3170,7 @@ const TIPS = {
   iceball: ['Ice balls incoming! Watch the edge arrows and dodge them', 'Ice balls incoming! Watch the edge arrows and dodge them'],
   bomb: ['Snow bombs! Dodge the shadows under the trees', 'Snow bombs! Dodge the shadows under the trees'],
 };
-const TIP_KEY = { pipe: 'pipe', gate: 'gate', ramp: 'ramp', rail: 'rail', log: 'hop', rock: 'hop', ice: 'ice', mogul: 'mogul', crev: 'crev', gap: 'gap', hoop: 'hoop', letter: 'letter',
+const TIP_KEY = { portal: 'portal', massign: 'massive', pipe: 'pipe', gate: 'gate', ramp: 'ramp', rail: 'rail', log: 'hop', rock: 'hop', ice: 'ice', mogul: 'mogul', crev: 'crev', gap: 'gap', hoop: 'hoop', letter: 'letter',
   well: 'well', needle: 'needle', power: 'power', snowman: 'snowman', cat: 'cat', judges: 'judges', flare: 'flare' };
 function checkTips() {
   if (tip) return;
@@ -3026,6 +3198,7 @@ function updatePlay(dt) {
   for (let i = 0; i < steps && state === 'play'; i++) step(h, inp);
   if (state !== 'play') return;
   hintT -= dt;
+  updateWarp(dt);
   if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
   if (tip) { tip.t -= dt; if (tip.t <= 0) tip = null; }
   checkTips();
@@ -3112,9 +3285,16 @@ function updatePlay(dt) {
     }
     if (P.y >= RACE_Y) {
       race.youFin = time - race.t0;
+      if (race.racer.id === 'luca' && L && race.lucaFin === null) {
+        // Impossible really is impossible: should you ever get there first, Luca was already over the line
+        race.lucaFin = race.youFin - rand(0.15, 0.4); L.y = Math.max(L.y, RACE_Y + 30); L.air = null; L.grind = null; L.z = 0;
+      }
       if (race.lucaFin === null && L) race.lucaEst = race.youFin + (RACE_Y - L.y) / Math.max(250, L.speed);
       race.win = race.lucaFin === null || race.youFin < race.lucaFin;
-      if (race.win) { stats.raceWins = 1; if (race.racer.id === 'luca') stats.lucaWins = 1; }
+      // nobody beats Luca, but finishing on his tail without a single crash wins his Pro Kit
+      race.clean = race.racer.id === 'luca' && stats.crashes === 0;
+      if (race.win) stats.raceWins = 1;
+      if (race.clean) stats.lucaClean = 1;
       checkMissions();
       gameOver('race');
     }
@@ -3605,7 +3785,7 @@ function drawMetalRail(o) {
   const k = o.kind, H = s => railH(o, s);
   let posts = [];
   if (k === 'rainbow') posts = [10, o.len / 2, o.len - 10];
-  else if (k === 'wave') { for (let s = 0; s <= o.len + 1; s += o.len / 4) posts.push(clamp(s, 8, o.len - 6)); }
+  else if (k === 'wave') { for (let s = 0; s <= o.len + 1; s += o.len / (2 * waveN(o))) posts.push(clamp(s, 8, o.len - 6)); }
   else if (k === 'down') posts = [10, o.len * 0.3, o.len * 0.7, o.len - 8];
   else { for (let s = 12; s < o.len - 30; s += 85) posts.push(s); posts.push(o.len - 8); }
   for (const s of posts) jibPost(o, s, H(s) - 1.5);
@@ -4179,6 +4359,8 @@ function drawUprightObj(o) {
     case 'pflag': drawParkFlag(o); break;
     case 'start': drawStart(o); break;
     case 'pipesign': drawPipeSign(o); break;
+    case 'portal': drawPortal(o); break;
+    case 'massign': drawMassiveSign(o); break;
     case 'finish': drawFinishArch(o); break;
     case 'hoop': drawHoop(o); break;
     case 'letter': drawLetter(o); break;
@@ -5812,6 +5994,7 @@ function render(dt = 0) {
   drawSpeedLines(dt);
   drawSnowfall();
   drawScreenFX();
+  drawWarp();
   flashA = Math.max(0, flashA - dt * 1.6);
   if (state === 'play' || state === 'paused') drawHUD();
   else if (state === 'over') { drawOverFade(); drawConfetti(dt); }
@@ -6953,13 +7136,14 @@ function gameOver(reason) {
     const r = race, lt = r.lucaFin !== null ? r.lucaFin : r.lucaEst, gap = lt !== null ? Math.abs(lt - r.youFin) : 0;
     const R = r.racer, twin = R.id === 'you', nm = twin ? 'your twin' : R.name;
     titles.race = r.win ? [twin ? 'YOU BEAT YOURSELF!' : `YOU BEAT ${R.name.toUpperCase()}!`, `${fmtTime(r.youFin)}, ${gap.toFixed(1)} s ahead of ${nm}`]
-      : [twin ? 'YOUR TWIN WINS' : `${R.name.toUpperCase()} WINS`, `You ${fmtTime(r.youFin)} · ${twin ? 'Twin' : R.name} ${fmtTime(r.lucaFin)}, ${gap.toFixed(1)} s back`];
-    cls = r.win ? 'end' : 'buried';
+      : [twin ? 'YOUR TWIN WINS' : `${R.name.toUpperCase()} WINS`, `You ${fmtTime(r.youFin)} · ${twin ? 'Twin' : R.name} ${fmtTime(r.lucaFin)}, ${gap.toFixed(1)} s back${r.clean ? ', and not a single crash!' : ''}`];
+    cls = r.win || r.clean ? 'end' : 'buried';
     const pbKey = `${MAP.id}.${R.id}`, pb = SAVE.raceBest[pbKey];
     r.newPB = !pb || r.youFin < pb;
     if (r.newPB) SAVE.raceBest[pbKey] = Math.round(r.youFin * 10) / 10;
-    r.unlock = r.win && R.id === 'luca' && !SAVE.ach.lucaWin;
-    if (r.win) { if (R.id === 'luca') SAVE.ach.lucaWin = true; sfx.trick(4); launchConfetti(); } else sfx.wipeout();
+    r.unlock = r.clean && !SAVE.ach.lucaWin;
+    if (r.clean) SAVE.ach.lucaWin = true;
+    if (r.win || r.clean) { sfx.trick(4); launchConfetti(); } else sfx.wipeout();
     persist();
   }
   $('overTitle').textContent = titles[reason][0]; $('overTitle').className = 'big ' + cls;
@@ -6975,7 +7159,7 @@ function gameOver(reason) {
   if (newBest) launchConfetti();
   const earned = settleRun();
   if (earned) {
-    $('overCoins').innerHTML = `+${fmt(earned.total)} ❄ snowflakes  <small>${earned.flakes} collected · ${earned.scoreBonus} score bonus · ${earned.missions} from missions${earned.race ? ` · ${earned.race} for beating ${race.racer.id === 'you' ? 'your twin' : race.racer.name}` : ''} · bank: ${fmt(SAVE.coins)}</small>`;
+    $('overCoins').innerHTML = `+${fmt(earned.total)} ❄ snowflakes  <small>${earned.flakes} collected · ${earned.scoreBonus} score bonus · ${earned.missions} from missions${earned.race ? ` · ${earned.race} for ${race.clean ? 'a clean race with Luca' : `beating ${race.racer.id === 'you' ? 'your twin' : race.racer.name}`}` : ''} · bank: ${fmt(SAVE.coins)}</small>`;
     $('overMissions').innerHTML = earned.done.map(r => `<div>✓ Mission complete: ${r.m.text} (+${r.m.reward})</div>`).join('')
       + (race && race.unlock ? `<div>🏆 Unlocked: Luca's Pro Kit — equip it in the shop!</div>` : '');
   }
