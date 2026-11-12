@@ -387,7 +387,7 @@
     </div>
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
-      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL, and every section ends with a <b style="display:inline;letter-spacing:0">MASSIVE</b> jump. Long rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. A purple <b style="display:inline;letter-spacing:0">pipe portal</b> is the only way into the <b style="display:inline;letter-spacing:0">Superpipe</b>: ride it as long as you like, then take a teal portal between pipes back to the park. Carve up a wall to launch, trick, and land back on the same wall.</div>
+      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL, and every section ends with a <b style="display:inline;letter-spacing:0">MASSIVE</b> jump. Long rails, boxes, tubes, down rails, wave rails, double kinks, A-frames, stair rails, culvert pipes, rail gardens and picnic tables all score while you grind. On <b style="display:inline;letter-spacing:0">S-rails, snake rails, C-boxes and S-tubes</b> the bends throw you outwards: lean into them (follow the arrow by the balance meter). A purple <b style="display:inline;letter-spacing:0">pipe portal</b> is the only way into the <b style="display:inline;letter-spacing:0">Superpipe</b>: ride it as long as you like (fly through the hoops above the walls), then take a teal portal between pipes back to the park. Carve up a wall to launch, trick, and land back on the same wall.</div>
       <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear, at the pace Luca used to race) and Impossible is Luca, who stays right with you sending insane tricks and always wins by a hair. Finish on his tail without crashing to win his Pro Kit.</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
       <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: race Luca on Impossible without crashing, or nail 10 pipe airs in a run.</div>
@@ -1649,17 +1649,21 @@ function addLanterns(G, n) {
     if (place(G, { t: 'lantern', x: rand(G.L, G.R), y: rand(G.y0, G.y1), r: 8 }, 40)) break;
   }
 }
-function addRail(G, kind, x, y, len, ang) {
-  const ux = Math.sin(ang), uy = Math.cos(ang);
+// opt.bend: 'S', 'C' or 'snake' with opt.amp, how far it swings sideways (positive = to the rider's right)
+function addRail(G, kind, x, y, len, ang, opt = {}) {
+  const ux = Math.sin(ang), uy = Math.cos(ang), spec = JIB[kind];
+  const o = { t: 'rail', kind, x, y, len, ux, uy, a: ang, h: spec.h, tol: spec.tol, col: pick(BOX_COLS), bend: opt.bend || null, amp: opt.amp || 0 };
+  const at = s => { const b = bendOff(o, s); return [x + ux * s + uy * b, y + uy * s - ux * b]; };
+  const wide = kind === 'culvert' || kind === 'stair' ? 54 : 36;
   const pts = [[x, y - 90, 50]];
-  for (let s = 0; s <= len; s += 60) pts.push([x + ux * s, y + uy * s, 36]);
-  pts.push([x + ux * (len + 130), y + uy * (len + 130), 60]);
+  for (let s = 0; s <= len; s += 60) pts.push([...at(s), wide]);
+  pts.push([...at(len + 130), 60]);
   if (!pts.every(([px, py, r]) => px > G.L + 20 && px < G.R - 20 && okSpot(px, py, r, 10))) return null;
   for (const [px, py, r] of pts) addReserve(px, py, r);
-  const spec = JIB[kind];
-  const o = { t: 'rail', kind, x, y, x2: x + ux * len, y2: y + uy * len, len, ux, uy, a: ang, h: spec.h, tol: spec.tol, col: pick(BOX_COLS) };
+  [o.x2, o.y2] = at(len);
+  if (o.bend) { let k = 0; for (let s = 0; s <= len; s += 10) k = Math.max(k, Math.abs(bendCurve(o, s))); o.kmax = k || 1; }   // its tightest bend
   G.out.push(o);
-  if (chance(0.5)) for (let s = 40; s < len - 10; s += 45) G.out.push({ t: 'flake', x: x + ux * s, y: y + uy * s, fz: railH(o, s) + 10, got: false });
+  if (chance(0.5)) for (let s = 40; s < len - 10; s += 45) { const [fx, fy] = at(s); G.out.push({ t: 'flake', x: fx, y: fy, fz: railH(o, s) + 10, got: false }); }
   return o;
 }
 // rails, boxes & jibs: base height, width tolerance, names (50-50 / slide), base points, points per second
@@ -1673,7 +1677,18 @@ const JIB = {
   down:    { h: 12, tol: 11, n: ['Down Rail', 'Down Rail Slide'], base: 150, rate: 620 },
   wave:    { h: 14, tol: 11, n: ['Wave Rail', 'Wave Slide'], base: 170, rate: 680 },
   table:   { h: 18, tol: 22, n: ['Table Ride', 'Table Slide'], base: 110, rate: 470 },
+  // curved and bigger park features: the bends push you outwards, so lean into them
+  srail:   { h: 16, tol: 11, n: ['S-Rail', 'S-Rail Slide'], base: 200, rate: 760 },
+  snake:   { h: 14, tol: 12, n: ['Snake Rail', 'Snake Slide'], base: 240, rate: 820 },
+  cbox:    { h: 11, tol: 20, n: ['C-Box', 'C-Box Slide'], base: 150, rate: 540 },
+  stube:   { h: 13, tol: 16, n: ['S-Tube', 'S-Tube Slide'], base: 170, rate: 620 },
+  dkink:   { h: 14, tol: 11, n: ['Double Kink', 'Double Kink Slide'], base: 190, rate: 700 },
+  aframe:  { h: 10, tol: 20, n: ['A-Frame Box', 'A-Frame Slide'], base: 140, rate: 500 },
+  culvert: { h: 24, tol: 24, n: ['Culvert Pipe', 'Culvert Slide'], base: 160, rate: 560 },
+  stair:   { h: 12, tol: 11, n: ['Stair Rail', 'Stair Rail Slide'], base: 210, rate: 740 },
 };
+const METAL = new Set(['rail', 'kink', 'rainbow', 'down', 'wave', 'srail', 'snake', 'dkink', 'stair']);
+const BOXES = new Set(['box', 'cbox', 'aframe']), TUBES = new Set(['tube', 'stube', 'culvert']);
 // height of a jib's grind surface at distance t along it
 const waveN = o => Math.max(2, Math.round(o.len / 220));   // a long wave rail gets more humps
 function railH(o, t) {
@@ -1682,8 +1697,24 @@ function railH(o, t) {
   if (o.kind === 'kink') return u < 0.4 ? o.h + 12 : o.h + 12 - 16 * (u - 0.4) / 0.6;
   if (o.kind === 'down') return u < 0.3 ? o.h + 22 : u < 0.7 ? o.h + 22 - 22 * (u - 0.3) / 0.4 : o.h;
   if (o.kind === 'wave') return o.h + 9 * (1 - Math.cos(u * TAU * waveN(o)));
+  // flat, down, flat, down, flat
+  if (o.kind === 'dkink') return o.h + (u < 0.22 ? 26 : u < 0.36 ? 26 - 13 * (u - 0.22) / 0.14 : u < 0.62 ? 13 : u < 0.76 ? 13 - 13 * (u - 0.62) / 0.14 : 0);
+  // up, across the top, back down
+  if (o.kind === 'aframe') return o.h + 18 * Math.min(1, u / 0.28, (1 - u) / 0.28);
+  // a handrail: along the landing at the top, down beside the steps, a short run-out at the bottom
+  if (o.kind === 'stair') return o.h + (u < 0.18 ? 34 : u < 0.86 ? 34 - 30 * (u - 0.18) / 0.68 : 4);
   return o.h;
 }
+// curved jibs: how far the jib sits off its straight line s along it (positive = the rider's right)
+function bendOff(o, s) {
+  if (!o.bend) return 0;
+  const u = clamp(s / o.len, 0, 1), A = o.amp;
+  if (o.bend === 'S') return A * (u - Math.sin(TAU * u) / TAU);           // an S-bend: swing across, then straighten out
+  if (o.bend === 'C') return A * (u * u - (1 - Math.cos(TAU * u)) / (2 * Math.PI * Math.PI));   // an arc: eases in, curves one way, eases out at an angle
+  return A * (Math.sin(TAU * u) - Math.sin(2 * TAU * u) / 2);            // a snake: one way, then the other
+}
+const bendSlope = (o, s) => (bendOff(o, s + 2) - bendOff(o, s - 2)) / 4;
+const bendCurve = (o, s) => (bendOff(o, s + 6) - 2 * bendOff(o, s) + bendOff(o, s - 6)) / 36;
 function weighted(opts) {
   let tot = 0; for (const [, w] of opts) tot += w;
   let r = Math.random() * tot;
@@ -1815,11 +1846,12 @@ function genPark(G) {
   G.wantLetter = chance(0.4);
   const opts = [
     ['kick', 0.2], ['line', 0.1], ['gap', d > 0.1 ? 0.09 : 0.04], ['xl', d > 0.2 ? 0.08 : 0.03], ['mega', d > 0.3 ? 0.06 : 0.015],
-    ['rail', 0.13], ['kink', 0.06], ['rainbow', 0.06], ['tube', 0.06], ['box', 0.1], ['down', 0.06], ['wave', 0.05], ['table', 0.05], ['jibs', 0.08],
+    ['rail', 0.1], ['kink', 0.05], ['rainbow', 0.05], ['tube', 0.05], ['box', 0.08], ['down', 0.05], ['wave', 0.04], ['table', 0.04], ['jibs', 0.07],
+    ['srail', 0.08], ['snake', 0.05], ['cbox', 0.05], ['stube', 0.04], ['dkink', 0.05], ['aframe', 0.04], ['culvert', 0.05], ['stair', 0.05], ['garden', 0.04],
   ];
   const tilt = a => rand(-a, a);
   for (let i = 0; i < nFeat; i++) {
-    const x = lanes[i], y = rand(G.y0 + 30, G.y1 - 60);
+    const x = lanes[i], y = rand(G.y0 + 30, G.y1 - 60), inward = -Math.sign(x) || 1;   // bends swing toward the middle of the course
     switch (weighted(opts)) {
       case 'kick': addRamp(G, KICK[pickSize(d)], x, y); break;
       case 'line': addKickerLine(G, x, y); break;
@@ -1827,20 +1859,36 @@ function genPark(G) {
       case 'xl': addRamp(G, KICK.xl, x, y); break;
       case 'mega': addRamp(G, KICK.mega, x, y); break;
       // long rails: the longer you stay on (and balanced), the more they pay
-      case 'rail': addRail(G, 'rail', x, y, rand(420, 620 + 200 * d), tilt(0.08)); break;
-      case 'kink': addRail(G, 'kink', x, y, rand(460, 680), tilt(0.06)); break;
-      case 'rainbow': addRail(G, 'rainbow', x, y, rand(340, 480), tilt(0.05)); break;
-      case 'tube': addRail(G, 'tube', x, y, rand(360, 560), tilt(0.07)); break;
-      case 'down': addRail(G, 'down', x, y, rand(480, 700), tilt(0.05)); break;
-      case 'wave': addRail(G, 'wave', x, y, rand(480, 720), tilt(0.05)); break;
+      case 'rail': addRail(G, 'rail', x, y, rand(560, 900 + 200 * d), tilt(0.05)); break;
+      case 'kink': addRail(G, 'kink', x, y, rand(600, 880), tilt(0.04)); break;
+      case 'rainbow': addRail(G, 'rainbow', x, y, rand(420, 600), tilt(0.04)); break;
+      case 'tube': addRail(G, 'tube', x, y, rand(500, 760), tilt(0.05)); break;
+      case 'down': addRail(G, 'down', x, y, rand(600, 880), tilt(0.04)); break;
+      case 'wave': addRail(G, 'wave', x, y, rand(640, 940), tilt(0.04)); break;
       case 'table': addRail(G, 'table', x, y, rand(150, 210), tilt(0.08)); break;
       case 'jibs': {
         // a jib line: two features back to back in the same lane
-        const a = addRail(G, pick(['box', 'tube', 'table', 'rail']), x, y, rand(260, 380), 0);
-        if (a) addRail(G, pick(['rail', 'kink', 'down', 'wave', 'rainbow']), a.x2, a.y2 + 350, rand(420, 620), tilt(0.04));
+        const a = addRail(G, pick(['box', 'tube', 'table', 'rail', 'aframe']), x, y, rand(300, 420), 0);
+        if (a) addRail(G, pick(['rail', 'kink', 'down', 'wave', 'rainbow', 'dkink']), a.x2, a.y2 + 350, rand(520, 760), tilt(0.04));
         break;
       }
-      default: addRail(G, 'box', x, y, rand(340, 560), tilt(0.07));
+      // bends: they throw you to the outside, so you have to lean into them
+      case 'srail': addRail(G, 'srail', x, y, rand(640, 940), 0, { bend: 'S', amp: inward * rand(55, 85) }); break;
+      case 'snake': addRail(G, 'snake', x, y, rand(1000, 1250), 0, { bend: 'snake', amp: (chance(0.5) ? 1 : -1) * rand(36, 50) }); break;
+      case 'cbox': addRail(G, 'cbox', x, y, rand(460, 660), 0, { bend: 'C', amp: inward * rand(45, 70) }); break;
+      case 'stube': addRail(G, 'stube', x, y, rand(560, 800), 0, { bend: 'S', amp: inward * rand(50, 75) }); break;
+      // more park staples
+      case 'dkink': addRail(G, 'dkink', x, y, rand(600, 860), tilt(0.04)); break;
+      case 'aframe': addRail(G, 'aframe', x, y, rand(380, 540), 0); break;
+      case 'culvert': addRail(G, 'culvert', x, y, rand(500, 760), tilt(0.04)); break;
+      case 'stair': addRail(G, 'stair', x, y, rand(460, 640), 0); break;
+      case 'garden': {
+        // a rail garden: three jibs side by side, take your pick
+        const len = rand(380, 560);
+        for (const k of [0, -1, 1]) addRail(G, pick(['rail', 'box', 'tube', 'kink', 'rainbow']), x + k * 90, y + rand(-40, 40), len * rand(0.85, 1.1), 0);
+        break;
+      }
+      default: addRail(G, 'box', x, y, rand(460, 720), tilt(0.05));
     }
   }
   if (G.wantLetter) {
@@ -1975,7 +2023,7 @@ function leavePipeWorld() {
 function genPipeWorld(G) {
   const S = pipeWorld;
   while (S.next < G.y1) {
-    const y0 = S.next, y1 = y0 + rand(2600, 3400), p = { x: 0, y0, y1 };
+    const y0 = S.next, y1 = y0 + rand(4200, 5600), p = { x: 0, y0, y1 };
     pipes.push(p);
     for (let y = y0; y < y1; y += 240) G.out.push({ t: 'pipe', p, x: 0, y, len: Math.min(241, y1 - y) });
     G.out.push({ t: 'pipesign', x: 0, y: y0 - 20 });
@@ -1983,6 +2031,8 @@ function genPipeWorld(G) {
     for (let y = y0 + 320, s = 1; y < y1 - 220; y += 270, s = -s) {
       for (let k = 0; k < 3; k++) G.out.push({ t: 'flake', x: s * (PIPE.a + PIPE.tw * 0.93), y: y + k * 34, fz: 60 + k * 22, base: PIPE.H, got: false });
     }
+    // hoops hung above the coping: launch off the wall at the right moment to fly through them
+    for (let y = y0 + 600, s = chance(0.5) ? 1 : -1; y < y1 - 500; y += rand(560, 820), s = -s) G.out.push({ t: 'hoop', x: s * (PIPE.a + PIPE.tw * 0.95), y, z: PIPE.H + rand(100, 160), r: 30, done: false, pz: true });
     // straight on for more pipe, or off to the side through the exit portal
     S.side = -S.side;
     G.out.push({ t: 'portal', exit: true, x: S.side * 170, y: y1 + PIPE_GAP * 0.55, w: 124, used: false, ph: rand(0, TAU) });
@@ -2210,7 +2260,7 @@ function ensureGen() {
 function prune() {
   const v = viewRect();
   pipes = pipes.filter(p => p.y1 > v.top - 900);
-  const cut = lowerBound(v.top - 800);
+  const cut = lowerBound(v.top - 1400);
   if (cut > 0) objs.splice(0, cut);
   const limit = v.top - 60;
   for (let i = tracks.length - 1; i >= 0; i--) {
@@ -2404,7 +2454,7 @@ function startGrind(o, t) {
     resetTricks();
   }
   P.air = 0; P.vz = 0; P.gapEnd = 0;
-  P.grind = { o, t: clamp(t, 0, o.len), bal: rand(-0.12, 0.12), drift: rand(-0.5, 0.5), time: 0, slideT: 0, slide: false, gust: rand(0.35, 0.7), good: 0 };
+  P.grind = { o, t: clamp(t, 0, o.len), bal: rand(-0.12, 0.12), drift: rand(-0.5, 0.5), time: 0, slideT: 0, slide: false, gust: rand(0.35, 0.7), good: 0, need: 0, lean: 0 };
   P.z = railH(o, P.grind.t);
   P.ang = P.mAng = o.a;
   P.speed = clamp(P.speed, 240, 380);
@@ -2437,7 +2487,7 @@ function endGrind(T) {
   sfx.pop();
 }
 function slipOff() {
-  const G = P.grind, o = G.o, side = Math.sign(G.bal) || 1;
+  const G = P.grind, o = G.o, side = Math.sign(G.bal - (G.need || 0)) || 1;
   P.grind = null;
   P.x += o.uy * side * (o.tol + 12); P.y -= o.ux * side * (o.tol + 12);
   P.air = 1; P.airDur = 0.3; P.z = railH(o, G.t); P.vz = 0;
@@ -2451,20 +2501,28 @@ function stepGrind(dt, inp) {
   P.speed = Math.max(200, P.speed - 50 * dt);
   G.t += P.speed * dt;
   G.drift = clamp(G.drift + rand(-1, 1) * dt * 5, -1, 1);
-  // every so often the rail kicks you one way or the other: keep working A / D (left / right) to stay on
-  if ((G.gust -= dt) <= 0) { G.gust = rand(0.6, 1.2); G.drift = clamp(G.drift + rand(0.4, 0.8) * (chance(0.5) ? 1 : -1), -1, 1); }
+  // every so often a straight rail kicks you one way or the other: keep working A / D (left / right) to stay on
+  if (!o.bend && (G.gust -= dt) <= 0) { G.gust = rand(0.6, 1.2); G.drift = clamp(G.drift + rand(0.4, 0.8) * (chance(0.5) ? 1 : -1), -1, 1); }
   const steer = (inp.steerR ? 1 : 0) - (inp.steerL ? 1 : 0);
-  G.bal += (G.drift + G.bal * (1.1 + Math.min(G.time, 2.5) * 0.35)) * dt * DIFF.bal + steer * 3 * dt;
-  if (Math.abs(G.bal) < 0.3) G.good += dt;
+  // bends: the sweet spot slides to the inside of each curve (further the faster you go), so you have to lean
+  // into it: on the meter the marker slides to the outside until you do, and an arrow shows which way to lean
+  const curve = o.bend ? bendCurve(o, G.t) / o.kmax : 0, ahead = o.bend ? bendCurve(o, G.t + P.speed * 0.3) / o.kmax : 0;   // 1 = its tightest bend
+  G.need = curve * (o.bend === 'snake' ? 0.45 : 0.55) * clamp((P.speed / 320) ** 2, 0.7, 1.4);
+  const off = G.bal - G.need;
+  G.bal += (G.drift * (o.bend ? 0.6 : 1) + off * (1.1 + Math.min(G.time, 2.5) * 0.35)) * dt * DIFF.bal + steer * 3 * dt;
+  G.lean = Math.abs(curve) > 0.3 ? Math.sign(curve) : Math.abs(ahead) > 0.3 ? Math.sign(ahead) : 0;
+  if (Math.abs(G.bal - G.need) < 0.3) G.good += dt;
   G.slide = inp.spinL || inp.spinR;
   if (G.slide) G.slideT += dt;
-  P.turn = G.bal;
+  P.turn = clamp(G.bal, -1, 1);
   P.tuckAmt += (0.45 - P.tuckAmt) * Math.min(1, dt * 10);
-  if (Math.abs(G.bal) > 1) { slipOff(); return; }
+  if (Math.abs(G.bal - G.need) > 1) { slipOff(); return; }
   if (G.t >= o.len) { endGrind(0.5); return; }
-  P.x = o.x + o.ux * G.t; P.y = o.y + o.uy * G.t; P.z = railH(o, G.t);
+  const bo = bendOff(o, G.t);
+  P.x = o.x + o.ux * G.t + o.uy * bo; P.y = o.y + o.uy * G.t - o.ux * bo; P.z = railH(o, G.t);
+  if (o.bend) P.ang = P.mAng = o.a + Math.atan(bendSlope(o, G.t));   // follow the curve
   if (Math.random() < dt * 45) {
-    const metal = o.kind === 'rail' || o.kind === 'kink' || o.kind === 'rainbow' || o.kind === 'down' || o.kind === 'wave';
+    const metal = METAL.has(o.kind);
     particles.push({ x: P.x + rand(-4, 4), y: P.y, z: P.z, vx: rand(-60, 60) - o.ux * 80, vy: -o.uy * rand(40, 120), vz: rand(30, 140), life: rand(0.2, 0.45), max: 0.45, r: rand(1, 2.2), col: metal ? (chance(0.5) ? '#ffd27a' : '#fff3c4') : '#dfe9f5', g: 600 });
   }
 }
@@ -2791,7 +2849,7 @@ function updateLuca(n, dt) {
     // a boardslide down the whole rail, then a 720 off the end
     const G = n.grind, o = G.o;
     G.t += n.speed * dt;
-    n.x = o.x + o.ux * G.t; n.y = o.y + o.uy * G.t; n.z = railH(o, Math.min(G.t, o.len)); n.ang = o.a;
+    const b = bendOff(o, G.t); n.x = o.x + o.ux * G.t + o.uy * b; n.y = o.y + o.uy * G.t - o.ux * b; n.z = railH(o, Math.min(G.t, o.len)); n.ang = o.a + Math.atan(bendSlope(o, G.t));
     if (Math.random() < dt * 40) particles.push({ x: n.x + rand(-4, 4), y: n.y, z: n.z, vx: rand(-60, 60) - o.ux * 80, vy: -o.uy * rand(40, 120), vz: rand(30, 140), life: 0.35, max: 0.35, r: rand(1, 2), col: '#ffd27a', g: 600 });
     if (G.t >= o.len) { n.grind = null; lucaLaunch(n, { H: 70, T: 0.9, flips: 0, spins: 2, grab: null, z0: n.z, name: `${JIB[o.kind].n[1]} to 720 out` }); }
     return;
@@ -2828,7 +2886,7 @@ function updateLuca(n, dt) {
       if (n.y > top && n.y < lip) n.gz = rampZ(o, (n.y - top) / o.h);
       if (py < lip && n.y >= lip) { lucaJump(n, o); return; }
     } else if (o.t === 'rail') {
-      const t0 = (px - o.x) * o.ux + (py - o.y) * o.uy, t1 = (n.x - o.x) * o.ux + (n.y - o.y) * o.uy, d1 = (n.x - o.x) * o.uy - (n.y - o.y) * o.ux;
+      const t0 = (px - o.x) * o.ux + (py - o.y) * o.uy, t1 = (n.x - o.x) * o.ux + (n.y - o.y) * o.uy, d1 = (n.x - o.x) * o.uy - (n.y - o.y) * o.ux - bendOff(o, t1);
       if (t0 < 0 && t1 >= 0 && Math.abs(d1) < o.tol + 8) { n.grind = { o, t: t1 }; n.speed = Math.min(n.speed, 430); return; }
     }
   }
@@ -2970,7 +3028,7 @@ function stepAir(dt, inp) {
 
 function collide() {
   P.onIce = false; P.onMogul = false; P.onCord = false;
-  const lo = lowerBound(P.y - 1000);   // far enough back to cover the longest rails
+  const lo = lowerBound(P.y - 1300);   // far enough back to cover the longest rails
   const ground = P.z < 4;
   for (let i = lo; i < objs.length; i++) {
     const o = objs[i];
@@ -3032,9 +3090,9 @@ function collide() {
       }
       case 'rail': {
         if (P.crashT > 0) break;
-        const t1 = dx * o.ux + dy * o.uy, d1 = dx * o.uy - dy * o.ux;
+        const t1 = dx * o.ux + dy * o.uy, d1 = dx * o.uy - dy * o.ux - bendOff(o, t1);   // (curved jibs: measured from the bend)
         const ox = P.px - o.x, oy = P.py - o.y;
-        const t0 = ox * o.ux + oy * o.uy, d0 = ox * o.uy - oy * o.ux;
+        const t0 = ox * o.ux + oy * o.uy, d0 = ox * o.uy - oy * o.ux - bendOff(o, t0);
         const hh = railH(o, t1);
         if (t0 < 0 && t1 >= 0 && Math.abs(d1) < o.tol && P.z < hh + 30 && Math.cos(P.mAng - o.a) > 0.5) startGrind(o, t1);
         else if (P.air && P.vz < 0 && P.z <= hh + 8 && P.z >= hh - 16 && Math.abs(d1) < o.tol + 4 && t1 > 0 && t1 < o.len - 15) startGrind(o, t1);
@@ -3046,7 +3104,7 @@ function collide() {
         break;
       case 'hoop':
         if (!o.done && P.py < o.y && P.y >= o.y) {
-          if (P.air && Math.abs(dx) < o.r * 0.85 && Math.abs(P.z - o.z) < o.r * 0.85) passHoop(o); else o.done = true;
+          if (P.air && Math.abs(dx) < o.r * 0.85 && Math.abs(P.z + (o.pz && P.pipeAir ? P.pipeBase : 0) - o.z) < o.r * 0.85) passHoop(o); else o.done = true;   // (pz: hung over the superpipe, measured from the ground; pipe airs start from the wall)
         }
         break;
       case 'letter':
@@ -3163,6 +3221,7 @@ const TIPS = {
   rail: ['Rail! Ride on from the start, balance with A / D, hold ← or → to slide', 'Rail! Ride on from the start and balance with left / right'],
   gap: ['Gap jump! Hit it with speed (hold S) or you will come up short', 'Gap jump! Hit it with speed or you will come up short'],
   hoop: ['Hoop! Fly through it off the kicker for bonus points', 'Hoop! Fly through it off the kicker for bonus points'],
+  bend: ['Bendy rail! The bends throw you outwards: lean into them with A / D (follow the arrow)', 'Bendy rail! The bends throw you outwards: lean into them (follow the arrow)'],
   portal: ['Pipe portal! The only way into the Superpipe: ski through the ring', 'Pipe portal! The only way into the Superpipe: ski through the ring'],
   massive: ['MASSIVE jump ahead! Tuck (hold S) for speed and send it', 'MASSIVE jump ahead! Hold both sides to tuck for speed and send it'],
   pipe: ['Superpipe! Ride it as long as you like (teal portals between pipes take you back). Carve up a wall to launch, trick and land on the same wall', 'Superpipe! Ride it as long as you like (teal portals take you back). Carve up a wall to launch and land on the same wall'],
@@ -3189,7 +3248,7 @@ function checkTips() {
   for (let i = lo; i < objs.length; i++) {
     const o = objs[i];
     if (o.y > P.y + 650) break;
-    const key = TIP_KEY[o.t];
+    const key = o.t === 'rail' && o.bend ? 'bend' : TIP_KEY[o.t];
     if (key && !tipsSeen.has(key)) { tipsSeen.add(key); tip = { text: TIPS[key][isTouch ? 1 : 0], t: 3.6 }; return; }
   }
 }
@@ -3747,7 +3806,8 @@ function drawGap(o) {
 }
 // ---- rails, boxes & jibs
 // a point along a jib: s along it, raised by z, offset sideways (positive = rider's right)
-const jp = (o, s, z = 0, side = 0) => [o.x + o.ux * s + o.uy * side, o.y + o.uy * s - o.ux * side - z];
+// (curved jibs follow their bend: see bendOff)
+const jp = (o, s, z = 0, side = 0) => { const sd = side + (o.bend ? bendOff(o, s) : 0); return [o.x + o.ux * s + o.uy * sd, o.y + o.uy * s - o.ux * sd - z]; };
 const RAINBOW = ['#ff4d4f', '#ffa62b', '#ffd43b', '#5ad08a', '#2b8cff', '#7b5cff'];
 function jibPath(o, f, step = 8) {
   ctx.beginPath();
@@ -3807,7 +3867,7 @@ function drawMetalRail(o) {
     const g = ctx.createLinearGradient(o.x, o.y, o.x2, o.y2);
     RAINBOW.forEach((c, i) => g.addColorStop(i / 5, c));
     ctx.strokeStyle = g;
-  } else ctx.strokeStyle = k === 'kink' || k === 'down' ? o.col : k === 'wave' ? '#ffc928' : '#9aa6b8';
+  } else ctx.strokeStyle = k === 'kink' || k === 'down' || k === 'dkink' ? o.col : k === 'wave' ? '#ffc928' : k === 'srail' ? '#ff5d8f' : k === 'snake' ? '#2fd6c0' : '#9aa6b8';
   ctx.lineWidth = 5.4; tube(0, 0); ctx.stroke();
   ctx.strokeStyle = 'rgba(0,10,30,0.32)'; ctx.lineWidth = 1.8; tube(1.6, 0); ctx.stroke();
   ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5; tube(-1.3, 0.6); ctx.stroke();
@@ -3817,34 +3877,40 @@ function drawMetalRail(o) {
   const [ex, ey] = jp(o, o.len, H(o.len));
   ctx.fillStyle = '#151a23'; ell(ex, ey, 3.4, 3.4); ctx.fill();
 }
+// a box (straight, C-shaped or A-frame): drawn in short slices so it can curve and change height along its length
 function drawBoxJib(o) {
-  const hw = 14, h = o.h, fw = hw + h * 0.55;   // the skirts flare out a little toward the snow
-  const a = jp(o, 0, h, -hw), b = jp(o, 0, h, hw), c = jp(o, o.len, h, hw), d = jp(o, o.len, h, -hw);
-  const bg = jp(o, 0, 0, fw), cg = jp(o, o.len, 0, fw), dg = jp(o, o.len, 0, -fw), ag = jp(o, 0, 0, -fw);
+  const hw = 14, N = Math.max(2, Math.ceil(o.len / 22)), S = [];
+  for (let i = 0; i <= N; i++) S.push(o.len * i / N);
+  const H = s => railH(o, s), fw = s => hw + H(s) * 0.55;   // the skirts flare out a little toward the snow
+  const L = S.map(s => jp(o, s, H(s), -hw)), R = S.map(s => jp(o, s, H(s), hw));
+  const LG = S.map(s => jp(o, s, 0, -fw(s))), RG = S.map(s => jp(o, s, 0, fw(s)));
+  const band = (a, b) => { ctx.beginPath(); a.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); for (let i = b.length - 1; i >= 0; i--) ctx.lineTo(...b[i]); ctx.closePath(); };
   // skirts: sunlit on the left, shaded on the right, and the end facing us
-  let g = ctx.createLinearGradient(0, a[1], 0, dg[1]);
+  let g = ctx.createLinearGradient(0, L[0][1], 0, LG[N][1]);
   g.addColorStop(0, shade(o.col, 0.2)); g.addColorStop(1, shade(o.col, -0.05));
-  ctx.fillStyle = g; poly([a, d, dg, ag]); ctx.fill();
-  ctx.fillStyle = shade(o.col, -0.38); poly([b, c, cg, bg]); ctx.fill();
-  g = ctx.createLinearGradient(dg[0], 0, cg[0], 0);
+  ctx.fillStyle = g; band(L, LG); ctx.fill();
+  ctx.fillStyle = shade(o.col, -0.38); band(R, RG); ctx.fill();
+  const a = L[N], b = R[N], ag = LG[N], bg = RG[N];
+  g = ctx.createLinearGradient(ag[0], 0, bg[0], 0);
   g.addColorStop(0, shade(o.col, 0.05)); g.addColorStop(1, shade(o.col, -0.35));
-  ctx.fillStyle = g; poly([d, c, cg, dg]); ctx.fill();
+  ctx.fillStyle = g; poly([a, b, bg, ag]); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = `900 7px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('PARK', (d[0] + c[0]) / 2, (d[1] + cg[1]) / 2 + 0.5);
+  ctx.fillText('PARK', (a[0] + b[0]) / 2, (a[1] + bg[1]) / 2 + 0.5);
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.2;
-  line((a[0] + ag[0]) / 2 + 1, (a[1] + ag[1]) / 2 + 2, (d[0] + dg[0]) / 2 + 1, (d[1] + dg[1]) / 2 - 2);
-  ctx.fillStyle = '#ffffff'; ell((dg[0] + cg[0]) / 2, (dg[1] + cg[1]) / 2, fw + 5, 2.6); ctx.fill();
-  // the slick deck
-  g = ctx.createLinearGradient(a[0], 0, b[0], 0);
+  jibPath(o, s => { const p = jp(o, s, H(s) * 0.5, -hw - H(s) * 0.27); return [p[0] + 1, p[1]]; }, 24); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ell((ag[0] + bg[0]) / 2, (ag[1] + bg[1]) / 2, fw(o.len) + 5, 2.6); ctx.fill();
+  // the slick deck, with a stripe down the middle
+  g = ctx.createLinearGradient(L[0][0], 0, R[0][0], 0);
   g.addColorStop(0, '#fbfcfe'); g.addColorStop(1, '#d5dde8');
-  ctx.fillStyle = g; poly([a, b, c, d]); ctx.fill();
+  ctx.fillStyle = g; band(L, R); ctx.fill();
   ctx.strokeStyle = o.col; ctx.globalAlpha = 0.55; ctx.lineWidth = 3; ctx.lineCap = 'butt';
-  line(...jp(o, 6, h, 0), ...jp(o, o.len - 6, h, 0)); ctx.globalAlpha = 1;
+  jibPath(o, s => jp(o, clamp(s, 6, o.len - 6), H(clamp(s, 6, o.len - 6)), 0), 14); ctx.stroke(); ctx.globalAlpha = 1;
   // steel coping along both edges
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#4a5260'; ctx.lineWidth = 1.8; line(...a, ...d); line(...b, ...c);
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 0.8; line(a[0] + 0.6, a[1], d[0] + 0.6, d[1]);
-  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; poly([a, b, c, d]); ctx.stroke();
+  const edge = side => jibPath(o, s => jp(o, s, H(s), side), 14);
+  ctx.strokeStyle = '#4a5260'; ctx.lineWidth = 1.8; edge(-hw); ctx.stroke(); edge(hw); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 0.8; edge(-hw + 0.6); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; band(L, R); ctx.stroke();
 }
 function drawTableJib(o) {
   const hw = 12, h = o.h, wood = '#a4703f', woodD = '#6e4524', woodL = '#c99460';
@@ -3879,29 +3945,59 @@ function drawTableJib(o) {
   ctx.fillStyle = 'rgba(255,255,255,0.92)';
   ctx.beginPath(); ctx.moveTo(...jp(o, o.len - 2, h, -hw + 1)); ctx.lineTo(...jp(o, o.len - 22, h, -hw + 3)); ctx.lineTo(...jp(o, o.len - 14, h, 2)); ctx.lineTo(...jp(o, o.len - 2, h, 4)); ctx.fill();
 }
+// a tube (or the big corrugated culvert pipe): supports every so often, then the pipe itself
 function drawTubeJib(o) {
-  const h = o.h, r = 8.5;
-  for (const s of [16, o.len - 16]) {
-    const [gx, gy] = jp(o, s);
-    ctx.fillStyle = '#2b313c'; poly([jp(o, s - 3, 0, -9), jp(o, s - 3, 0, 9), jp(o, s - 3, h - r * 0.6, 7), jp(o, s - 3, h - r * 0.6, -7)]); ctx.fill();
-    ctx.fillStyle = '#ffffff'; ell(gx, gy, 12, 2); ctx.fill();
+  const big = o.kind === 'culvert', h = o.h, r = big ? 15 : 8.5, col = big ? '#a9b4c4' : o.col;
+  const sup = [];
+  for (let s = 16; s < o.len - 30; s += big ? 150 : 210) sup.push(s);
+  sup.push(o.len - 16);
+  for (const s of sup) {
+    const [gx, gy] = jp(o, s), w = big ? 14 : 9;
+    ctx.fillStyle = '#2b313c'; poly([jp(o, s - 3, 0, -w), jp(o, s - 3, 0, w), jp(o, s - 3, h - r * 0.6, w - 2), jp(o, s - 3, h - r * 0.6, -w + 2)]); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ell(gx, gy, w + 3, 2.2); ctx.fill();
   }
   const tube = (side, dz) => jibPath(o, s => jp(o, s, h + dz, side), 12);
   ctx.lineCap = 'butt';
   ctx.strokeStyle = '#151a23'; ctx.lineWidth = r * 2 + 2; tube(0, 0); ctx.stroke();
-  ctx.strokeStyle = o.col; ctx.lineWidth = r * 2; tube(0, 0); ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = r * 2; tube(0, 0); ctx.stroke();
   ctx.strokeStyle = 'rgba(0,10,30,0.28)'; ctx.lineWidth = r * 0.8; tube(r * 0.6, 0); ctx.stroke();
   ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = r * 0.5; tube(-r * 0.45, 0); ctx.stroke();
   ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.4; tube(-r * 0.55, 0); ctx.stroke();
-  // corrugations
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
-  for (let s = 9; s < o.len - 4; s += 9) line(...jp(o, s, h, -r + 1), ...jp(o, s, h, r - 1));
+  // corrugations (deep ribs on the culvert)
+  ctx.strokeStyle = big ? 'rgba(20,30,45,0.3)' : 'rgba(0,0,0,0.18)'; ctx.lineWidth = big ? 2 : 1.4; ctx.lineCap = 'round';
+  for (let s = 9; s < o.len - 4; s += big ? 7 : 9) line(...jp(o, s, h, -r + 1), ...jp(o, s, h, r - 1));
+  if (big) {
+    // a snow cap along the top, and a painted band
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    jibPath(o, s => jp(o, s, h + 1.5, -2 + Math.sin(s * 0.09) * 1.5), 10); ctx.stroke();
+    ctx.strokeStyle = o.col; ctx.globalAlpha = 0.85; ctx.lineWidth = 2.4;
+    jibPath(o, s => jp(o, s, h - r * 0.35, r * 0.75), 14); ctx.stroke(); ctx.globalAlpha = 1;
+  }
   // the open end
   const [ex, ey] = jp(o, o.len, h);
   ctx.fillStyle = '#151a23'; ell(ex, ey, r + 1, r + 1); ctx.fill();
   const g = ctx.createRadialGradient(ex - 1, ey - 1, 0, ex, ey, r);
-  g.addColorStop(0, '#05070b'); g.addColorStop(0.7, '#1e2532'); g.addColorStop(1, shade(o.col, -0.4));
+  g.addColorStop(0, '#05070b'); g.addColorStop(0.7, '#1e2532'); g.addColorStop(1, shade(col, -0.4));
   ctx.fillStyle = g; ell(ex, ey, r - 0.5, r - 0.5); ctx.fill();
+  if (big) { ctx.strokeStyle = '#d4dce8'; ctx.lineWidth = 2; ell(ex, ey, r - 1, r - 1); ctx.stroke(); }
+}
+// the snow-built staircase that a stair rail runs down beside: a landing at the top, steps, then the run-out
+function drawStairs(o) {
+  const H = s => railH(o, s) - o.h - 4, s0 = o.len * 0.18, s1 = o.len * 0.86, n = Math.max(6, Math.round((s1 - s0) / 34));
+  const inner = -16, outer = -64;   // the steps sit on the rider's left of the rail
+  const steps = [[-24, s0, H(0)]];
+  for (let i = 0; i < n; i++) { const a = s0 + (s1 - s0) * i / n, b = s0 + (s1 - s0) * (i + 1) / n; steps.push([a, b, H((a + b) / 2)]); }
+  // shadow cast off to the right of the whole flight
+  ctx.fillStyle = 'rgba(62,92,150,0.18)';
+  poly([jp(o, -24, 0, outer), jp(o, s0, 0, outer), jp(o, s1, 0, outer + 8), jp(o, s1 + 20, 0, inner + 4), jp(o, -24, 0, inner + 8)]); ctx.fill();
+  for (const [a, b, z] of steps) {
+    // the outer side wall in the sun, the riser facing down the hill, then the snowy tread
+    ctx.fillStyle = '#e3eaf4'; poly([jp(o, a, z, outer), jp(o, b, z, outer), jp(o, b, 0, outer), jp(o, a, 0, outer)]); ctx.fill();
+    ctx.fillStyle = '#aebcd0'; poly([jp(o, b, z, outer), jp(o, b, z, inner), jp(o, b, 0, inner), jp(o, b, 0, outer)]); ctx.fill();
+    ctx.strokeStyle = 'rgba(70,90,120,0.35)'; ctx.lineWidth = 1; line(...jp(o, b, z * 0.5, outer + 3), ...jp(o, b, z * 0.5, inner - 3));
+    ctx.fillStyle = '#ffffff'; poly([jp(o, a, z, outer), jp(o, a, z, inner), jp(o, b, z, inner), jp(o, b, z, outer)]); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,140,170,0.5)'; ctx.lineWidth = 1; line(...jp(o, b, z, outer), ...jp(o, b, z, inner));
+  }
 }
 function drawLogJib(o) {
   const h = o.h, r = 7.5;
@@ -3929,14 +4025,15 @@ function drawLogJib(o) {
   ctx.strokeStyle = '#4a2f1a'; ctx.lineWidth = 1.2; ell(ex, ey, r, r); ctx.stroke();
 }
 function drawRail(o) {
-  const k = o.kind, wide = k === 'box' || k === 'table';
+  const k = o.kind, wide = BOXES.has(k) || k === 'table', big = k === 'culvert';
   ctx.lineJoin = 'round';
-  jibShadow(o, k === 'tube' ? 18 : k === 'logjib' ? 15 : wide ? 28 : 5);
-  if (k !== 'logjib') jibOnRamp(o, wide ? 17 : k === 'tube' ? 12 : 10);
+  if (k === 'stair') drawStairs(o);
+  jibShadow(o, big ? 30 : TUBES.has(k) ? 18 : k === 'logjib' ? 15 : wide ? 28 : 5);
+  if (k !== 'logjib') jibOnRamp(o, big ? 20 : wide ? 17 : TUBES.has(k) ? 12 : 10);
   else { ctx.fillStyle = '#ffffff'; const [x, y] = jp(o, -4); ell(x, y, 16, 6); ctx.fill(); }
   if (k === 'logjib') drawLogJib(o);
-  else if (k === 'tube') drawTubeJib(o);
-  else if (k === 'box') drawBoxJib(o);
+  else if (TUBES.has(k)) drawTubeJib(o);
+  else if (BOXES.has(k)) drawBoxJib(o);
   else if (k === 'table') drawTableJib(o);
   else drawMetalRail(o);
   ctx.lineCap = 'round';
@@ -5321,7 +5418,7 @@ function drawWorld(v) {
   drawGlints(v);
   drawLiftShadows(v);
   // long things (rails, jump lanes) start well above the view, so look further back for those
-  const lo = lowerBound(v.top - 640);
+  const lo = lowerBound(v.top - 1300);   // (long rails start well above the screen)
   const xl = v.left - 200, xr = v.right + 200, yb = v.bottom + 260;
   for (let i = lo; i < objs.length; i++) {
     const o = objs[i]; if (o.y > yb) break;
@@ -5907,13 +6004,22 @@ function drawHUD() {
     const grd = ctx.createLinearGradient(bx3, 0, bx3 + bw3, 0);
     grd.addColorStop(0, '#ff4d4f'); grd.addColorStop(0.3, '#ffd43b'); grd.addColorStop(0.5, '#5ad08a'); grd.addColorStop(0.7, '#ffd43b'); grd.addColorStop(1, '#ff4d4f');
     ctx.fillStyle = grd; rr(bx3, by3 - 2.5, bw3, 5, 2.5); ctx.fill();
-    const mxp = bx3 + bw3 / 2 + clamp(G.bal, -1, 1) * bw3 / 2;
+    const mxp = bx3 + bw3 / 2 + clamp(G.bal - (G.need || 0), -1, 1) * bw3 / 2;   // (on a bend: how far you are from leaning just right)
     ctx.fillStyle = '#ffffff'; rr(mxp - 3, by3 - 7, 6, 14, 3); ctx.fill();
     ctx.strokeStyle = 'rgba(10,20,40,0.6)'; ctx.lineWidth = 1; rr(mxp - 3, by3 - 7, 6, 14, 3); ctx.stroke();
     const r = grindResult(G);
     ctx.font = `900 14px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(14,28,54,0.85)';
     ctx.strokeText(r.name.toUpperCase(), ssx, by3 - 20); ctx.fillStyle = '#ffd27a'; ctx.fillText(r.name.toUpperCase(), ssx, by3 - 20);
+    if (G.lean) {
+      // a bend: a pulsing arrow beside the meter shows which way to lean (A left, D right)
+      const ax = ssx + G.lean * (bw3 / 2 + 24), pulse = 0.65 + 0.35 * Math.sin(time * 12);
+      ctx.globalAlpha = pulse; ctx.fillStyle = '#7dffe0'; ctx.strokeStyle = 'rgba(14,28,54,0.85)'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(ax + G.lean * 10, by3); ctx.lineTo(ax - G.lean * 6, by3 - 10); ctx.lineTo(ax - G.lean * 6, by3 + 10); ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.font = `900 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeText('LEAN', ax, by3 + 19); ctx.fillText('LEAN', ax, by3 + 19);
+      ctx.globalAlpha = 1;
+    }
   }
 
   drawPopups();
