@@ -387,7 +387,7 @@
     </div>
     <div class="how">
       <div><b>Combo</b>Gates, tricks, grinds, hoops and close calls build your multiplier up to ×5. Keep chaining — it drains if you stop! Avalanche &amp; One Life on Normal or Pro pay <b style="display:inline;letter-spacing:0">2×</b> for tricks off jumps and rails.</div>
-      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL, and every section ends with a <b style="display:inline;letter-spacing:0">MASSIVE</b> jump. Long rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. Ski through a purple <b style="display:inline;letter-spacing:0">pipe portal</b> to warp into the <b style="display:inline;letter-spacing:0">Superpipe</b>, then carve up a wall to launch, trick, and land back on the same wall.</div>
+      <div><b>Terrain park</b>Jumps come in S, M, L, XL and XXL, and every section ends with a <b style="display:inline;letter-spacing:0">MASSIVE</b> jump. Long rails, boxes, tubes, down rails, wave rails and picnic tables all score while you grind. A purple <b style="display:inline;letter-spacing:0">pipe portal</b> is the only way into the <b style="display:inline;letter-spacing:0">Superpipe</b>: ride it as long as you like, then take a teal portal between pipes back to the park. Carve up a wall to launch, trick, and land back on the same wall.</div>
       <div><b>Race</b>First to 1,000 m wins. The race difficulty picks your rival: Easy is Jimmy, Normal is Bum, Hard is your twin (in your gear, at the pace Luca used to race) and Impossible is Luca, who stays right with you sending insane tricks and always wins by a hair. Finish on his tail without crashing to win his Pro Kit.</div>
       <div><b>Power-ups</b><span style="color:#ff6b6b">Magnet</span> pulls in snowflakes · <span style="color:#6fb8ff">Shield</span> saves one crash · <span style="color:#ffa13d">Boost</span> rockets you downhill</div>
       <div><b>Snowflakes</b>Collect them and finish missions to earn snowflakes, then spend them in the Shop on outfits, skis, trees, snow, trails, weather, buddies and trick effects, or gamble on a Mystery Gift. Some gear can only be won: race Luca on Impossible without crashing, or nail 10 pipe airs in a run.</div>
@@ -1414,7 +1414,7 @@ function reset() {
   race = MODE.id === 'race' ? { cd: 3.4, beep: 4, t0: 0, lucaFin: null, youFin: null, lucaEst: null, racer: RACERS[raceLvl] } : null;
   if (race) npcs.push(newLuca(70, 6, 0, race.racer));   // side by side in the start gate
   resetBuddy();
-  pipes = []; pipeNext = 900; massiveIdx = 0; massiveEnd = -1e9; portalNext = 1500; warp = null;
+  pipes = []; massiveIdx = 0; massiveEnd = -1e9; portalNext = 1500; warp = null; pipeWorld = null; quietUntil = -1e9;
   runCoins = 0; settled = false;
   objs = []; pending = []; gReserved = []; gSolids = [];
   genY = -800;
@@ -1793,27 +1793,22 @@ function genPark(G) {
   if (my - 330 < G.y1) { addMassive(G, my); my = massiveY(++massiveIdx); }
   const massiveSoon = my - 330 < G.y1 + 3000, massiveOn = massiveEnd > G.y0;
   if (massiveSoon) for (let y = G.y0; y < G.y1; y += 140) gReserved.push({ x: 0, y, r: 270, hold: true });
-  // now and then the superpipe takes over the middle of the park (never where a massive jump lands)
-  // (for a while beforehand the middle of the park is held clear so there is room for it)
-  if (G.y0 >= pipeNext && !massiveOn && my - 330 - G.y0 > 3300 && addPipe(G)) pipeNext = G.y0 + rand(3000, 4800);
-  const pipeSoon = G.y0 >= pipeNext - 2600;
-  if (pipeSoon) for (let y = G.y0; y < G.y1; y += 140) gReserved.push({ x: 0, y, r: PIPE_HALF + 70, hold: true });
+  // (the superpipe isn't on the run itself: it has its own place, reached only through a pipe portal)
   // judges' zone: tricks landed inside score ×1.5
   if (G.y0 >= judgeNext && chance(0.35)) {
     G.out.push({ t: 'judges', x: COURSE_HALF - 70, y: G.y0 + 20, h: 760, cards: null, cardsT: -9 });
     judgeNext = G.y0 + 1800;
   }
-  const middleBusy = pipeSoon || massiveSoon || massiveOn || pipeAt(0, G.y0) || pipeAt(0, G.y1);
+  const middleBusy = massiveSoon || massiveOn;
   const lanes = (middleBusy ? [-540, 540] : [-540, -180, 180, 540]).map(x => x + rand(-50, 50)).sort(() => Math.random() - 0.5);
-  // pipe portals in the run-up to each superpipe: ski through one to warp straight into it (not in races: no shortcuts)
-  // (only when that pipe can't get pushed back behind a massive jump, so the warp is always a short one)
-  if (!race && G.y0 >= portalNext && pipeSoon && !massiveOn && my - 330 - Math.max(pipeNext, G.y0) > 3800 && !pipeAt(0, G.y0) && !pipeAt(0, G.y1)) {
+  // a pipe portal every so often: the only way into the Superpipe (not in races: they're a ride of their own)
+  if (!race && G.y0 >= portalNext) {
     const x = lanes[lanes.length - 1], y = rand(G.y0 + 120, G.y1 - 140), cs = [[x, y - 120, 60], [x, y, 84], [x, y + 140, 70]];
     if (cs.every(([cx, cy, r]) => okSpot(cx, cy, r, 10))) {
       G.out.push({ t: 'portal', x, y, w: 116, used: false, ph: rand(0, TAU) });
       for (const [cx, cy, r] of cs) addReserve(cx, cy, r);
       lanes.pop();
-      portalNext = G.y0 + rand(900, 1400);
+      portalNext = G.y0 + rand(1500, 2500);
     }
   }
   const nFeat = Math.min(lanes.length, chance(0.4 + d * 0.4) ? 4 : 3);
@@ -1935,7 +1930,7 @@ function genGlade(G) {
 // trick, and land back on the same wall; each air sends you across to the other side.
 const PIPE = { a: 74, tw: 68, H: 68, deck: 28, slope: 62 };   // half floor width, transition, wall height, deck, outer slope
 const PIPE_HALF = PIPE.a + PIPE.tw + PIPE.deck + PIPE.slope;
-let pipes = [], pipeNext = 900, massiveIdx = 0, massiveEnd = -1e9, portalNext = 1500, warp = null;
+let pipes = [], massiveIdx = 0, massiveEnd = -1e9, portalNext = 1500, warp = null, pipeWorld = null, quietUntil = -1e9;
 // the walls rise from nothing at the drop-in and sink back down at the bottom
 const pipeEnd = (p, y) => clamp(Math.min((y - p.y0) / 90, (p.y1 - y) / 70), 0, 1);
 function pipeZ(p, dx, y) {
@@ -1948,22 +1943,6 @@ function pipeZ(p, dx, y) {
   return z * pipeEnd(p, y);
 }
 const pipeAt = (x, y) => pipes.find(p => y >= p.y0 && y <= p.y1 && Math.abs(x - p.x) < PIPE_HALF);
-function addPipe(G) {
-  const x = rand(-40, 40), y0 = G.y0 + 60, y1 = y0 + rand(1700, 2400), R = PIPE_HALF + 26, cs = [];
-  for (let y = y0 - 130; y < y1 + 150; y += R * 0.8) cs.push([x, y, R]);
-  cs.push([x, y1 + 150, R]);
-  if (!claimFree(cs, true)) return false;
-  for (const [cx, cy, r] of cs) addReserve(cx, cy, r);
-  const p = { x, y0, y1 };
-  pipes.push(p);
-  for (let y = y0; y < y1; y += 240) G.out.push({ t: 'pipe', p, x, y, len: Math.min(241, y1 - y) });
-  G.out.push({ t: 'pipesign', x, y: y0 - 20 });
-  // snowflakes hanging in the air above alternate walls
-  for (let y = y0 + 320, s = 1; y < y1 - 220; y += 270, s = -s) {
-    for (let k = 0; k < 3; k++) G.out.push({ t: 'flake', x: x + s * (PIPE.a + PIPE.tw * 0.93), y: y + k * 34, fz: 60 + k * 22, base: PIPE.H, got: false });
-  }
-  return true;
-}
 // ---- the MASSIVE jump that closes out each section of the park, set so you land right around the start of the
 // next zone (past the last zone, one every 900 m). For a while beforehand its whole lane is held clear.
 const massiveY = k => (k < ZONE_M.length - 1 ? ZONE_M[k + 1] : ZONE_M[ZONE_M.length - 1] + 900 * (k - ZONE_M.length + 2)) * PX_PER_M - 1700;
@@ -1973,57 +1952,82 @@ function addMassive(G, y) {
   G.out.push({ t: 'massign', x: 0, y: y - spec.h / 2 - 60 });
   massiveEnd = y + spec.h / 2 + 2700;
 }
-// ---- pipe portals: ski through one and you're swept straight into the next superpipe
-const WARP_IN = 0.32, WARP_OUT = 0.6;
-function pipeAhead() {
-  const find = () => pipes.find(p => p.y0 > P.y + 150);
-  let p = find();
-  if (!p) {
-    pipeNext = Math.min(pipeNext, genY);   // bring the next superpipe forward so the portal has somewhere to go
-    for (let k = 0; k < 12 && !p; k++) { generateBand(genY); genY += BAND; p = find(); }
+// ---- the Superpipe has its own place, and a pipe portal is the only way in. Inside, one long pipe follows another
+// for as long as you like; between each pair an exit portal stands off to one side to take you back to the park.
+const WARP_IN = 0.32, WARP_OUT = 0.6, PIPE_GAP = 820;
+function clearWorld() { objs = []; pending = []; gReserved = []; gSolids = []; pipes = []; }
+function enterPipeWorld() {
+  const base = Math.round(P.y);
+  clearWorld(); npcs = [];
+  pipeWorld = { next: base + 200, side: chance(0.5) ? 1 : -1 };
+  genY = base - 600;
+  P.x = P.px = 0; P.y = P.py = base + 240;   // right at the drop-in of the first pipe
+  stats.pipeVisits = (stats.pipeVisits || 0) + 1;
+}
+function leavePipeWorld() {
+  pipeWorld = null;
+  clearWorld();
+  quietUntil = P.y + 700;   // a quiet stretch of snow to come out onto
+  portalNext = P.y + 1800;
+  genY = P.y - 600;
+}
+// one band of the Superpipe: start the next pipe when it's due, with an exit portal in the gap after it
+function genPipeWorld(G) {
+  const S = pipeWorld;
+  while (S.next < G.y1) {
+    const y0 = S.next, y1 = y0 + rand(2600, 3400), p = { x: 0, y0, y1 };
+    pipes.push(p);
+    for (let y = y0; y < y1; y += 240) G.out.push({ t: 'pipe', p, x: 0, y, len: Math.min(241, y1 - y) });
+    G.out.push({ t: 'pipesign', x: 0, y: y0 - 20 });
+    // snowflakes hanging in the air above alternate walls
+    for (let y = y0 + 320, s = 1; y < y1 - 220; y += 270, s = -s) {
+      for (let k = 0; k < 3; k++) G.out.push({ t: 'flake', x: s * (PIPE.a + PIPE.tw * 0.93), y: y + k * 34, fz: 60 + k * 22, base: PIPE.H, got: false });
+    }
+    // straight on for more pipe, or off to the side through the exit portal
+    S.side = -S.side;
+    G.out.push({ t: 'portal', exit: true, x: S.side * 170, y: y1 + PIPE_GAP * 0.55, w: 124, used: false, ph: rand(0, TAU) });
+    S.next = y1 + PIPE_GAP;
   }
-  return p;
 }
 function startWarp(o) {
   o.used = true;
-  warp = { t: 0, moved: false, x: o.x, y: o.y };
+  warp = { t: 0, moved: false, exit: !!o.exit };
   P.invuln = Math.max(P.invuln, WARP_IN + 0.6);
   tone(330, 0.45, 'sine', 0.07, 990); tone(660, 0.4, 'triangle', 0.05, 1320, 0.08);
-  ring(o.x, o.y, '#b28cff', 110); sparkle(o.x, o.y, 50);
+  ring(o.x, o.y, o.exit ? '#3ddbc8' : '#b28cff', 110); sparkle(o.x, o.y, 50);
 }
 function updateWarp(dt) {
   if (!warp) return;
   warp.t += dt;
   if (!warp.moved && warp.t >= WARP_IN) {
-    // the screen is all swirl now: move the rider to the drop-in of the superpipe
+    // the screen is all swirl now: swap the world over underneath it
     warp.moved = true;
-    const p = pipeAhead();
-    if (!p) { popup('The portal fizzled out!', '#d6b8ff'); return; }
-    P.x = P.px = p.x; P.y = P.py = p.y0 + 40;
+    if (warp.exit) leavePipeWorld(); else enterPipeWorld();
     P.ang = P.mAng = 0; P.speed = Math.max(P.speed, 480);
-    P.air = 0; P.z = 0; P.vz = 0; P.gz = 0; P.grind = null; P.pipeAir = null; P.stuck = 0;
+    P.air = 0; P.z = 0; P.vz = 0; P.gz = 0; P.grind = null; P.pipe = null; P.pipeAir = null; P.stuck = 0;
     resetTricks();
-    P.invuln = Math.max(P.invuln, 0.8);
+    P.invuln = Math.max(P.invuln, 1);
     camX = P.x;
     endStroke(); startStroke(); resetBuddy();
-    stats.warps = (stats.warps || 0) + 1;
-    ring(P.x, P.y, '#b28cff', 130); sparkle(P.x, P.y, 20);
-    popup('Warped into the Superpipe!', '#d6b8ff', true);
+    ensureGen();
+    const col = warp.exit ? '#7dffe0' : '#d6b8ff';
+    ring(P.x, P.y, warp.exit ? '#3ddbc8' : '#b28cff', 130); sparkle(P.x, P.y, 20);
+    popup(warp.exit ? 'Back in the park!' : 'Welcome to the Superpipe! Ride it as long as you like', col, true);
     tone(990, 0.3, 'triangle', 0.06, 495);
   }
   if (warp.t >= WARP_IN + WARP_OUT) warp = null;
 }
-// the swirl that covers the jump: builds up as you go through the portal, then clears to show the pipe
+// the swirl that covers the jump: builds up as you go through the portal, then clears to show where you are
 function drawWarp() {
   if (!warp) return;
   const t = warp.t, k = t < WARP_IN ? t / WARP_IN : 1 - (t - WARP_IN) / WARP_OUT, a = clamp(k * k * (3 - 2 * k), 0, 1);
   if (a <= 0) return;
-  const cx = W / 2, cy = H * anchor, R = Math.hypot(W, H);
+  const cx = W / 2, cy = H * anchor, R = Math.hypot(W, H), c = warp.exit ? [[200, 255, 246], [61, 219, 200], [10, 90, 110]] : [[222, 200, 255], [138, 92, 255], [52, 22, 150]];
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
   g.addColorStop(0, `rgba(255,255,255,${a})`);
-  g.addColorStop(0.3, `rgba(222,200,255,${a * 0.96})`);
-  g.addColorStop(0.7, `rgba(138,92,255,${a * 0.92})`);
-  g.addColorStop(1, `rgba(52,22,150,${a * 0.9})`);
+  g.addColorStop(0.3, `rgba(${c[0]},${a * 0.96})`);
+  g.addColorStop(0.7, `rgba(${c[1]},${a * 0.92})`);
+  g.addColorStop(1, `rgba(${c[2]},${a * 0.9})`);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.lineCap = 'round';
   for (let i = 0; i < 18; i++) {
@@ -2033,23 +2037,28 @@ function drawWarp() {
     ctx.beginPath(); ctx.arc(cx, cy, r0 * (1.2 - 0.5 * a), ang, ang + len); ctx.stroke();
   }
 }
-// an upright ring with a purple vortex spinning inside it; the sign says where it goes
+// an upright ring with a vortex spinning inside it: purple into the Superpipe, teal for the way back out
+const PORTAL_COLS = {
+  in:  { halo: '178,140,255', core: ['#eadcff', '#8a5cff', '#2e1386'], arm: 'rgba(214,184,255,0.7)', rimD: '#3d1799', rim: '#a77bff', lit: '#d6b8ff', ink: '#7b2ff0', text: '#5a1fd0', label: 'TO THE PIPE' },
+  out: { halo: '61,219,200', core: ['#d8fff9', '#2fc4b2', '#0b4f5c'], arm: 'rgba(170,255,240,0.7)', rimD: '#0b5b57', rim: '#3ddbc8', lit: '#b5fff3', ink: '#0f8c7e', text: '#0b6b61', label: 'BACK TO PARK' },
+};
 function drawPortal(o) {
+  const C = PORTAL_COLS[o.exit ? 'out' : 'in'];
   const x = o.x, base = o.y, R = o.w / 2, cy = base - R - 8, t = time * 2.4 + o.ph;
   ctx.fillStyle = 'rgba(62,92,150,0.22)';
   ctx.beginPath(); ctx.ellipse(x + R * 0.55, base + 4, R + 12, 7, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(150,110,255,0.22)'; ell(x, base + 1, R * 0.8, 6); ctx.fill();
+  ctx.fillStyle = `rgba(${C.halo},0.22)`; ell(x, base + 1, R * 0.8, 6); ctx.fill();
   const halo = ctx.createRadialGradient(x, cy, R * 0.7, x, cy, R * 1.55);
-  halo.addColorStop(0, 'rgba(178,140,255,0.42)'); halo.addColorStop(1, 'rgba(178,140,255,0)');
+  halo.addColorStop(0, `rgba(${C.halo},0.42)`); halo.addColorStop(1, `rgba(${C.halo},0)`);
   ctx.fillStyle = halo; ell(x, cy, R * 1.55, R * 1.55); ctx.fill();
   ctx.save();
   ell(x, cy, R - 4, R - 4); ctx.clip();
   const g = ctx.createRadialGradient(x, cy, 2, x, cy, R);
-  g.addColorStop(0, '#ffffff'); g.addColorStop(0.22, '#eadcff'); g.addColorStop(0.6, '#8a5cff'); g.addColorStop(1, '#2e1386');
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.22, C.core[0]); g.addColorStop(0.6, C.core[1]); g.addColorStop(1, C.core[2]);
   ctx.fillStyle = g; ctx.fillRect(x - R, cy - R, 2 * R, 2 * R);
   ctx.lineCap = 'round';
   for (let i = 0; i < 5; i++) {
-    ctx.strokeStyle = i % 2 ? 'rgba(255,255,255,0.55)' : 'rgba(214,184,255,0.7)'; ctx.lineWidth = 3.2;
+    ctx.strokeStyle = i % 2 ? 'rgba(255,255,255,0.55)' : C.arm; ctx.lineWidth = 3.2;
     ctx.beginPath();
     for (let s = 0; s <= 18; s++) {
       const u = s / 18, an = -t + i * TAU / 5 + u * 3.4, r = 3 + u * (R - 6);
@@ -2063,26 +2072,26 @@ function drawPortal(o) {
   ctx.fillStyle = '#2b2f3a';
   for (const s of [-1, 1]) { rr(x + s * R * 0.62 - 8, base - 12, 16, 12, 3); ctx.fill(); }
   ctx.fillStyle = '#ffffff'; for (const s of [-1, 1]) { ell(x + s * R * 0.62, base + 0.5, 11, 3); ctx.fill(); }
-  ctx.lineWidth = 10; ctx.strokeStyle = '#3d1799'; ell(x, cy, R, R); ctx.stroke();
-  ctx.lineWidth = 6; ctx.strokeStyle = '#a77bff'; ell(x, cy, R, R); ctx.stroke();
+  ctx.lineWidth = 10; ctx.strokeStyle = C.rimD; ell(x, cy, R, R); ctx.stroke();
+  ctx.lineWidth = 6; ctx.strokeStyle = C.rim; ell(x, cy, R, R); ctx.stroke();
   ctx.lineWidth = 1.8; ctx.strokeStyle = 'rgba(255,255,255,0.85)';
   ctx.beginPath(); ctx.arc(x, cy, R - 1.5, Math.PI * 1.02, Math.PI * 1.62); ctx.stroke();
   // lights chasing round the rim
   for (let i = 0; i < 8; i++) {
     const an = i / 8 * TAU + time * 1.6, on = (i + Math.floor(time * 6)) % 2;
-    ctx.fillStyle = on ? '#ffffff' : '#d6b8ff'; ell(x + Math.cos(an) * R, cy + Math.sin(an) * R, 2.4, 2.4); ctx.fill();
+    ctx.fillStyle = on ? '#ffffff' : C.lit; ell(x + Math.cos(an) * R, cy + Math.sin(an) * R, 2.4, 2.4); ctx.fill();
   }
   // sign on top: a little halfpipe glyph and where it takes you
   const sy = cy - R - 22;
   ctx.font = `900 12px ${FONT}`;
-  const label = 'TO THE PIPE', bw = ctx.measureText(label).width + 36;
+  const bw = ctx.measureText(C.label).width + 36;
   ctx.fillStyle = 'rgba(20,30,50,0.3)'; rr(x - bw / 2 + 2, sy - 11 + 2, bw, 22, 7); ctx.fill();
   ctx.fillStyle = '#ffffff'; rr(x - bw / 2, sy - 11, bw, 22, 7); ctx.fill();
-  ctx.strokeStyle = '#7b2ff0'; ctx.lineWidth = 2; rr(x - bw / 2 + 2.5, sy - 8.5, bw - 5, 17, 5); ctx.stroke();
-  ctx.strokeStyle = '#7b2ff0'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 2; rr(x - bw / 2 + 2.5, sy - 8.5, bw - 5, 17, 5); ctx.stroke();
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(x - bw / 2 + 9, sy - 4); ctx.quadraticCurveTo(x - bw / 2 + 9, sy + 4, x - bw / 2 + 15, sy + 4); ctx.quadraticCurveTo(x - bw / 2 + 21, sy + 4, x - bw / 2 + 21, sy - 4); ctx.stroke();
-  ctx.fillStyle = '#5a1fd0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + 8, sy + 0.5);
+  ctx.fillStyle = C.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(C.label, x + 8, sy + 0.5);
 }
 function drawMassiveSign(o) { drawArch(o.x, o.y, 252, 158, '#ff8a1f', 'MASSIVE AIR'); }   // wide enough to clear the size sign
 // called every step: ride the walls, launch off the coping, hold the wall height while airborne
@@ -2182,7 +2191,9 @@ function generateBand(y0) {
     for (let x = G.L; x <= G.R; x += 110) addReserve(x, RACE_Y, 46);
     for (const s of [-1, 1]) addReserve(s * 300, RACE_Y, 60);
   }
-  if (y0 < 300) genStart(G); else { MAP_GEN[MAP.id](G); genExtras(G); }
+  if (y0 < 300) genStart(G);
+  else if (pipeWorld) genPipeWorld(G);   // inside the Superpipe
+  else if (y0 >= quietUntil) { MAP_GEN[MAP.id](G); genExtras(G); }   // (a quiet stretch right where you come out of it)
   commit(G.out, y0, y1);
 }
 
@@ -2604,8 +2615,8 @@ function spawnRival() {
 }
 function updateRivals(dt) {
   npcTimer -= dt;
-  if (npcTimer <= 0) { if (npcs.length < 3) spawnRival(); npcTimer = rand(7, 13); }
-  if (maxDist > 40 && !race) { lucaTimer -= dt; if (lucaTimer <= 0) lucaTimer = !npcs.some(n => n.pro) && spawnLuca() ? rand(50, 80) : 4; }
+  if (npcTimer <= 0) { if (npcs.length < 3 && !pipeWorld) spawnRival(); npcTimer = rand(7, 13); }
+  if (maxDist > 40 && !race && !pipeWorld) { lucaTimer -= dt; if (lucaTimer <= 0) lucaTimer = !npcs.some(n => n.pro) && spawnLuca() ? rand(50, 80) : 4; }
   for (const n of npcs) {
     if (n.pro) {
       updateLuca(n, dt);
@@ -3152,9 +3163,9 @@ const TIPS = {
   rail: ['Rail! Ride on from the start, balance with A / D, hold ← or → to slide', 'Rail! Ride on from the start and balance with left / right'],
   gap: ['Gap jump! Hit it with speed (hold S) or you will come up short', 'Gap jump! Hit it with speed or you will come up short'],
   hoop: ['Hoop! Fly through it off the kicker for bonus points', 'Hoop! Fly through it off the kicker for bonus points'],
-  portal: ['Halfpipe portal! Ski through the ring to warp straight into the superpipe', 'Halfpipe portal! Ski through the ring to warp straight into the superpipe'],
+  portal: ['Pipe portal! The only way into the Superpipe: ski through the ring', 'Pipe portal! The only way into the Superpipe: ski through the ring'],
   massive: ['MASSIVE jump ahead! Tuck (hold S) for speed and send it', 'MASSIVE jump ahead! Hold both sides to tuck for speed and send it'],
-  pipe: ['Superpipe! Carve up a wall to launch, trick in the air and land back on the same wall', 'Superpipe! Carve up a wall to launch, trick, and land back on the wall'],
+  pipe: ['Superpipe! Ride it as long as you like (teal portals between pipes take you back). Carve up a wall to launch, trick and land on the same wall', 'Superpipe! Ride it as long as you like (teal portals take you back). Carve up a wall to launch and land on the same wall'],
   letter: ['Grab the letter bubbles to spell P-A-R-K for a 2,000 point bonus', 'Grab the letter bubbles to spell P-A-R-K for a 2,000 point bonus'],
   hop: ['Press SPACE to jump over logs and rocks', 'Swipe up to jump over logs and rocks'],
   ice: ['Ice! No grip and no brakes — steer early', 'Ice! No grip and no brakes — steer early'],
@@ -5861,7 +5872,7 @@ function drawHUD() {
     ctx.textBaseline = 'alphabetic';
   }
   // zone pill with progress toward the next zone
-  const zname = MAP.zones[zoneIdx].toUpperCase(), zc = MAP.zcols[zoneIdx];
+  const zname = (pipeWorld ? 'Superpipe' : MAP.zones[zoneIdx]).toUpperCase(), zc = pipeWorld ? '#a77bff' : MAP.zcols[zoneIdx];
   ctx.font = `900 11px ${FONT}`;
   const lettersW = WORD.length * 26 - 4, zw = ctx.measureText(zname).width + 40, zy = rows.zy;
   // when the P-A-R-K letters share this row: on phones the pill goes left and the letters right, otherwise they share the middle
