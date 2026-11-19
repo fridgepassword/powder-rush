@@ -45,6 +45,7 @@
     filter: drop-shadow(2px 0 0 #0b1f3f) drop-shadow(-2px 0 0 #0b1f3f) drop-shadow(0 -2px 0 #0b1f3f) drop-shadow(0 2px 0 #0b1f3f) drop-shadow(0 6px 0 #0b1f3f) drop-shadow(0 14px 18px rgba(0,0,0,0.4)); }
   .logo span { background: linear-gradient(180deg, #ffffff 0%, #eef7ff 48%, #a6d6ff 52%, #d6ecff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 0.04em; }
   .logo span + span { background-image: linear-gradient(180deg, #fff6c2 0%, #ffd43b 48%, #ffad1f 52%, #ffc94a 100%); }
+  .ver { margin: 8px 0 0; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: rgba(227,241,255,0.7); }
   .tag { margin: 8px 0 0; display: inline-flex; gap: 10px; align-items: center; font-size: clamp(12px, 1.8vw, 15px); font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: #e3f1ff;
     padding: 6px 18px; border-radius: 999px; background: rgba(8,22,50,0.45); border: 1px solid var(--line); }
   .tag i { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); display: inline-block; }
@@ -292,6 +293,7 @@
     <header class="hero">
       <h1 class="logo"><span>POWDER</span><span>RUSH</span></h1><br>
       <p class="tag">Carve <i></i> Jump <i></i> Grind <i></i> Flip <i></i> Survive</p>
+      <p class="ver" id="verTag"></p>
     </header>
     <div class="menu-grid">
       <div>
@@ -471,6 +473,9 @@ const fmt = n => Math.floor(n).toLocaleString('en-US');
 const FONT = "'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif";
 const $ = id => document.getElementById(id);
 
+// the game's version: bump it with every update you publish (and add the changes to CHANGELOG.md)
+const VERSION = '2.6.0';
+$('verTag').textContent = 'v' + VERSION;
 const PX_PER_M = 25;       // world pixels per meter
 const COURSE_HALF = 750;   // half width of the skiable course
 const BAND = 500;          // height of each procedurally generated band
